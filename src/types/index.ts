@@ -29,3 +29,39 @@ export interface BookGuide {
   colorVar: string;
   icon: string;
 }
+
+export type LibraryCategory =
+  | 'Fundamentos'
+  | 'Trading Institucional'
+  | 'Scalping'
+  | 'Múltiples Estrategias'
+  | 'Análisis Técnico y Mercado';
+
+export interface LibraryResourceItem {
+  id: string;
+  title: string;
+  description: string;
+  category: LibraryCategory;
+  format: string;
+  fileUrl: string;
+  fileSize: string;
+  pagesCount: number;
+  author: string;
+  downloadCount: number;
+  isPublic?: boolean;
+  assignedUserIds?: string[];
+  chapters?: string[];
+  createdAt?: unknown;
+}
+
+export interface DownloadLogItem {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  resourceId: string;
+  resourceTitle: string;
+  category: string;
+  downloadedAt?: unknown;
+}
+

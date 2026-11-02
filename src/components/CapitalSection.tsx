@@ -1,5 +1,5 @@
-import React from 'react';
 import { QuadrantQuiz } from './QuadrantQuiz';
+import { AlHadiqaCapitalSection } from './AlHadiqaCapitalSection';
 import { LibrarySection } from './LibrarySection';
 import { TestimonialsSection } from './TestimonialsSection';
 
@@ -35,7 +35,7 @@ export const CapitalSection: React.FC = () => {
           </div>
           <blockquote className="quote-banner">
             <p>&laquo;Los hombres luchan y Dios concede la victoria.&raquo;</p>
-            <small>Filosofía AL-HADIQAINVEST · Tú pones el esfuerzo y la constancia; los resultados llegan.</small>
+            <small>Filosofía AL-HADIQA INVEST · «Cultivando el crecimiento, nutriendo su capital»</small>
           </blockquote>
         </div>
 
@@ -120,6 +120,9 @@ export const CapitalSection: React.FC = () => {
 
         {/* Quadrant Quiz Component */}
         <QuadrantQuiz />
+
+        {/* Al-Hadiqa Capital Hub: Educación Financiera & Desarrollo Personal */}
+        <AlHadiqaCapitalSection />
 
         {/* Free Library Component */}
         <LibrarySection />

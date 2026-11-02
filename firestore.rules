@@ -1,0 +1,186 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all documents (Zero-Trust Security)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // El Administrador (Sr. Smith) se identifica por su correo Google oficial o por la colección /admins
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'empresaalhadiqainvest@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Comprobación de usuario activo (no pendiente ni suspendido)
+    function isActiveUser() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
+        )
+      );
+    }
+
+    // Comprobación de socio aprobador (JustMarkets o Admin)
+    function isApprover() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'aprobador' &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active'
+        )
+      );
+    }
+
+    function isValidUserPayload(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'status']) &&
+        data.uid is string &&
+        data.email is string &&
+        data.displayName is string && data.displayName.size() <= 100 &&
+        (data.role in ['admin', 'alumno', 'aprobador']) &&
+        (data.status in ['active', 'pending', 'suspended']);
+    }
+
+    // Punto de prueba de conectividad pública
+    match /test/{docId} {
+      allow get: if true;
+    }
+
+    // Colección de Administradores verificados (Zero-Trust)
+    match /admins/{adminId} {
+      allow get, list, write: if isBootstrappedAdmin();
+    }
+
+    // Colección de Usuarios y Perfiles de Alumno
+    match /users/{userId} {
+      // Un usuario autenticado solo puede leer su propio perfil; el admin puede leer y listar todos
+      allow get: if isSignedIn() && (isOwner(userId) || isBootstrappedAdmin());
+      allow list: if isBootstrappedAdmin();
+
+      // Registro inicial: Cualquier usuario nuevo entra como 'alumno' y estado 'pending',
+      // excepto el Administrador configurado que se crea como 'admin' y 'active'.
+      allow create: if isSignedIn() && isOwner(userId) && isValidUserPayload(incoming()) && (
+        isBootstrappedAdmin() || (incoming().role == 'alumno' && incoming().status == 'pending')
+      );
+
+      // Actualizaciones:
+      // El administrador tiene control total para aprobar ('active'), suspender o cambiar roles.
+      // El alumno autenticado solo puede actualizar su displayName o photoURL, sin alterar su rol ni su estado.
+      allow update: if isBootstrappedAdmin() || (
+        isOwner(userId) &&
+        isValidUserPayload(incoming()) &&
+        incoming().role == existing().role &&
+        incoming().status == existing().status &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+      );
+
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Clases en vivo y sesiones masterclass
+    // Lectura pública de la cartelera y temarios para prospective students y la comunidad.
+    // Creación y borrado exclusivo del Administrador; actualización permitida a Admin y Aprobador socio.
+    match /classes/{classId} {
+      allow get, list: if true;
+      allow create, delete: if isBootstrappedAdmin();
+      allow update: if isBootstrappedAdmin() || isApprover();
+    }
+
+    // Transmisión Streaming oficial del Admin (@AL-HADIQAINVEST) y acceso de Alumnos
+    match /live_broadcasts/{broadcastId} {
+      allow get, list: if true;
+      allow create, update, delete: if isBootstrappedAdmin();
+    }
+
+    // Chat comunitario en tiempo real
+    // Lectura pública del feed del chat para fomentar la comunidad; creación restringida a usuarios activos autenticados.
+    match /chat_messages/{messageId} {
+      allow get, list: if true;
+      allow create: if isActiveUser() && incoming().authorId == request.auth.uid;
+      allow update, delete: if isBootstrappedAdmin() || (isActiveUser() && existing().authorId == request.auth.uid);
+    }
+
+    // Ajustes globales del sistema (silencio global de chat, etc.)
+    match /system_settings/{settingId} {
+      allow get, list: if true;
+      allow write: if isBootstrappedAdmin();
+    }
+
+    // Biblioteca de libros y manuales de trading
+    // Catálogo visible públicamente; descarga protegida por permisos individuales y registro de auditoría.
+    match /library_resources/{resourceId} {
+      allow get, list: if true;
+      allow write: if isBootstrappedAdmin();
+    }
+
+    // Registro de auditoría de descargas (quién descargó qué recurso y fecha exacta)
+    match /download_logs/{logId} {
+      allow create: if isActiveUser() && incoming().userId == request.auth.uid;
+      allow get, list: if isBootstrappedAdmin() || (isActiveUser() && existing().userId == request.auth.uid);
+      allow update: if false; // Inmutable
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Progreso formativo de alumnos en Al-Hadiqa Capital
+    match /capital_progress/{userId} {
+      allow get: if isActiveUser() && (isOwner(userId) || isBootstrappedAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create, update: if isActiveUser() && isOwner(userId);
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Avisos y notificaciones en vivo
+    match /notifications/{notificationId} {
+      allow get, list: if true;
+      allow create: if isActiveUser() || isBootstrappedAdmin();
+      allow update, delete: if isBootstrappedAdmin();
+    }
+
+    // Registro de correos transaccionales entregados
+    match /email_logs/{emailId} {
+      allow create: if isActiveUser() || isBootstrappedAdmin();
+      allow get, list: if isBootstrappedAdmin() || (isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.toEmail == request.auth.token.email));
+      allow update, delete: if isBootstrappedAdmin();
+    }
+
+    // Preferencias individuales de notificaciones y correo
+    match /notification_preferences/{userId} {
+      allow get, list: if isSignedIn() && (isOwner(userId) || isBootstrappedAdmin());
+      allow create, update: if isSignedIn() && (isOwner(userId) || isBootstrappedAdmin());
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Registro inmutable de auditoría para acciones administrativas
+    match /admin_audit_logs/{logId} {
+      allow get, list, create: if isBootstrappedAdmin();
+      allow update, delete: if false;
+    }
+  }
+}

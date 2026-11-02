@@ -1,0 +1,287 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for community members, students, approvers, and admin.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "displayName": { "type": "string", "maxLength": 100, "description": "Full name or alias" },
+        "photoURL": { "type": "string", "maxLength": 500, "description": "Avatar photo URL" },
+        "role": { "type": "string", "enum": ["admin", "alumno", "aprobador"], "description": "RBAC user role" },
+        "status": { "type": "string", "enum": ["active", "pending", "suspended"], "description": "Account authorization state" },
+        "permissions": {
+          "type": "object",
+          "description": "Granular module access granted by administrator"
+        },
+        "isMuted": { "type": "boolean", "description": "Whether user is muted from chatting" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp created" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp updated" }
+      },
+      "required": ["uid", "email", "displayName", "role", "status"]
+    },
+    "LiveClass": {
+      "title": "LiveClass",
+      "description": "Trading and financial education classes, workshops, and live sessions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Class unique identifier" },
+        "title": { "type": "string", "maxLength": 150, "description": "Class title" },
+        "description": { "type": "string", "maxLength": 1000, "description": "Summary or syllabus" },
+        "instructor": { "type": "string", "maxLength": 100, "description": "Session host or instructor" },
+        "category": { "type": "string", "enum": ["SMC", "Forex", "Cripto", "Psicología", "Capital", "General"] },
+        "scheduledAt": { "type": "string", "format": "date-time", "description": "Live stream date and time" },
+        "streamUrl": { "type": "string", "maxLength": 500, "description": "Live broadcast link or meeting URL" },
+        "streamSource": { "type": "string", "enum": ["youtube", "twitch", "facebook", "webrtc_direct", "custom_embed"], "description": "Streaming provider" },
+        "status": { "type": "string", "enum": ["borrador", "pendiente_aprobacion", "aprobada", "programada", "en_vivo", "finalizada", "archivada", "rechazada", "draft", "pending_approval", "approved", "published"], "description": "Full 7-state approval and live streaming lifecycle" },
+        "createdBy": { "type": "string", "description": "UID of creator (admin/instructor)" },
+        "approvedBy": { "type": "string", "description": "UID of partner approver or admin" },
+        "partnerNotes": { "type": "string", "maxLength": 1000, "description": "Approval feedback, audit comments or rejection reason by partner" },
+        "attendeeCount": { "type": "number", "description": "Estimated or registered attendees" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "instructor", "category", "status", "createdBy"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Real-time community trading chat messages.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Message document ID" },
+        "authorId": { "type": "string", "description": "UID of the author" },
+        "authorName": { "type": "string", "maxLength": 100, "description": "Sender display name" },
+        "authorPhoto": { "type": "string", "maxLength": 500, "description": "Sender photo URL" },
+        "authorRole": { "type": "string", "enum": ["admin", "alumno", "aprobador"] },
+        "text": { "type": "string", "maxLength": 800, "description": "Message content" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["authorId", "authorName", "text"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Platform alerts, class reminders, and administrative announcements.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Notification ID" },
+        "title": { "type": "string", "maxLength": 150 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "targetRole": { "type": "string", "enum": ["all", "alumno", "aprobador"] },
+        "type": { "type": "string", "enum": ["info", "urgent", "class", "maintenance"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "targetRole"]
+    },
+    "LibraryResource": {
+      "title": "LibraryResource",
+      "description": "Functional trading education library books, institution manuals, and study guides.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "enum": ["Fundamentos", "Trading Institucional", "Scalping", "Múltiples Estrategias", "Análisis Técnico y Mercado", "SMC", "Finanzas", "Psicología", "Cripto", "Capital"] },
+        "format": { "type": "string", "enum": ["PDF", "XLSX", "DOCX", "EPUB"] },
+        "fileUrl": { "type": "string", "maxLength": 500 },
+        "fileSize": { "type": "string", "maxLength": 50 },
+        "pagesCount": { "type": "number" },
+        "author": { "type": "string", "maxLength": 100 },
+        "downloadCount": { "type": "number" },
+        "isPublic": { "type": "boolean" },
+        "assignedUserIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "format"]
+    },
+    "DownloadLog": {
+      "title": "DownloadLog",
+      "description": "Audit trail recording who downloaded which trading book/resource and when.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string", "maxLength": 100 },
+        "userEmail": { "type": "string", "format": "email" },
+        "resourceId": { "type": "string" },
+        "resourceTitle": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string" },
+        "downloadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "userEmail", "resourceId", "resourceTitle"]
+    },
+    "SystemSetting": {
+      "title": "SystemSetting",
+      "description": "Global operational platform toggles like global chat mute.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "isGlobalMuted": { "type": "boolean" },
+        "notice": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrative lookup document.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "UID of the administrator" },
+        "email": { "type": "string", "format": "email", "description": "Administrator email" },
+        "role": { "type": "string", "enum": ["admin"] }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "CapitalProgress": {
+      "title": "CapitalProgress",
+      "description": "Student learning progress, completed lessons, summaries and modules in Al-Hadiqa Capital.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the student" },
+        "completedLessonIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of completed classes, readings and summaries" },
+        "completedModuleIds": { "type": "array", "items": { "type": "string" }, "description": "IDs of fully completed modules" },
+        "lastActiveLessonId": { "type": "string", "description": "Last accessed lesson ID" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId"]
+    },
+    "EmailLog": {
+      "title": "EmailLog",
+      "description": "Transactional emails dispatched to students (welcome, live class alert, new content, permission changes).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "toEmail": { "type": "string", "format": "email" },
+        "toName": { "type": "string", "maxLength": 100 },
+        "subject": { "type": "string", "maxLength": 150 },
+        "templateType": { "type": "string", "enum": ["bienvenida", "clase_en_vivo", "nuevo_contenido", "cambio_permisos", "sistema"] },
+        "htmlContent": { "type": "string" },
+        "status": { "type": "string", "enum": ["delivered", "pending", "bounced"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["toEmail", "subject", "templateType"]
+    },
+    "NotificationPreference": {
+      "title": "NotificationPreference",
+      "description": "User notification preferences and unsubscribe opt-out state.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "emailLiveClasses": { "type": "boolean" },
+        "emailNewContent": { "type": "boolean" },
+        "emailPermissionChanges": { "type": "boolean" },
+        "inAppSound": { "type": "boolean" },
+        "unsubscribedAll": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId"]
+    },
+    "AdminAuditLog": {
+      "title": "AdminAuditLog",
+      "description": "Immutable audit trail of administrator and moderator actions.",
+      "type": "object",
+      "properties": {
+        "adminUid": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "actionType": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "details": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adminUid", "adminEmail", "actionType", "details"]
+    },
+    "SecurityEvent": {
+      "title": "SecurityEvent",
+      "description": "Security events, injection blockages, and antivirus quarantine logs.",
+      "type": "object",
+      "properties": {
+        "eventType": { "type": "string" },
+        "details": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventType", "details"]
+    },
+    "LiveBroadcast": {
+      "title": "LiveBroadcast",
+      "description": "Official streaming broadcast controlled by admin with student notifications and YouTube integration.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1500 },
+        "youtubeUrl": { "type": "string", "maxLength": 500 },
+        "channelUrl": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["en_vivo", "programada", "finalizada", "standby"] },
+        "instructor": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string" },
+        "isLive": { "type": "boolean" },
+        "viewerCount": { "type": "number" },
+        "scheduledAt": { "type": "string" },
+        "startedAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "status", "youtubeUrl", "channelUrl"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User account profiles and permission states."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted collection defining verified platform administrators."
+    },
+    "/classes/{classId}": {
+      "schema": { "$ref": "#/entities/LiveClass" },
+      "description": "Live classes and educational masterclasses subject to partner approval."
+    },
+    "/live_broadcasts/{broadcastId}": {
+      "schema": { "$ref": "#/entities/LiveBroadcast" },
+      "description": "Dedicated streaming broadcast transmission managed by admin with student notifications."
+    },
+    "/chat_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Community live trading discussion messages."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "System announcements and broadcast messages."
+    },
+    "/library_resources/{resourceId}": {
+      "schema": { "$ref": "#/entities/LibraryResource" },
+      "description": "Educational documents and materials repository."
+    },
+    "/system_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SystemSetting" },
+      "description": "Global platform configurations like global chat mute."
+    },
+    "/download_logs/{logId}": {
+      "schema": { "$ref": "#/entities/DownloadLog" },
+      "description": "Audit records of book downloads by students."
+    },
+    "/capital_progress/{userId}": {
+      "schema": { "$ref": "#/entities/CapitalProgress" },
+      "description": "Student learning progress, completed lessons and modules in Al-Hadiqa Capital."
+    },
+    "/email_logs/{emailId}": {
+      "schema": { "$ref": "#/entities/EmailLog" },
+      "description": "Log of transactional emails delivered to students."
+    },
+    "/notification_preferences/{userId}": {
+      "schema": { "$ref": "#/entities/NotificationPreference" },
+      "description": "User preferences for notifications and email communications."
+    },
+    "/admin_audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AdminAuditLog" },
+      "description": "Server-side immutable log of admin actions."
+    },
+    "/security_events/{eventId}": {
+      "schema": { "$ref": "#/entities/SecurityEvent" },
+      "description": "Security and threat defense records."
+    }
+  }
+}
