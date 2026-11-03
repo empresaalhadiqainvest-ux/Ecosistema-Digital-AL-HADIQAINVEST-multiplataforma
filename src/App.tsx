@@ -26,6 +26,9 @@ import { FloatingAssistantBot } from './components/FloatingAssistantBot';
 import { SecurityComplianceModal } from './components/SecurityComplianceModal';
 import { OpenSourceTradingMentorModal } from './components/OpenSourceTradingMentorModal';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
+import { SmcCalculatorValidatorModal } from './components/SmcCalculatorValidatorModal';
+import { FeedbackModal } from './components/FeedbackModal';
+import { FeedbackCategory, FeedbackModule } from './types/feedback';
 
 export const AppContent: React.FC = () => {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -33,6 +36,10 @@ export const AppContent: React.FC = () => {
   const [isApproverOpen, setIsApproverOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
   const [isMentorOpen, setIsMentorOpen] = useState(false);
+  const [isSmcSuiteOpen, setIsSmcSuiteOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackCategory, setFeedbackCategory] = useState<FeedbackCategory>('sugerencia');
+  const [feedbackModule, setFeedbackModule] = useState<FeedbackModule>('calculador_smc');
 
   // Asegura que al cargar la aplicación inmediatamente cargue desde el inicio ("Holding & Academia")
   useEffect(() => {
@@ -50,6 +57,28 @@ export const AppContent: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Escuchar evento global para abrir la suite de cálculo y validación SMC
+  useEffect(() => {
+    const handleOpenSmcSuite = () => {
+      setIsSmcSuiteOpen(true);
+    };
+
+    window.addEventListener('al_hadiqa_open_smc_suite', handleOpenSmcSuite);
+    return () => window.removeEventListener('al_hadiqa_open_smc_suite', handleOpenSmcSuite);
+  }, []);
+
+  // Escuchar evento global para abrir el Centro de Feedback y Correcciones
+  useEffect(() => {
+    const handleOpenFeedback = (e: any) => {
+      if (e?.detail?.category) setFeedbackCategory(e.detail.category);
+      if (e?.detail?.module) setFeedbackModule(e.detail.module);
+      setIsFeedbackOpen(true);
+    };
+
+    window.addEventListener('al_hadiqa_open_feedback', handleOpenFeedback);
+    return () => window.removeEventListener('al_hadiqa_open_feedback', handleOpenFeedback);
+  }, []);
+
   return (
     <>
       <Background3D />
@@ -63,13 +92,14 @@ export const AppContent: React.FC = () => {
         onOpenApprover={() => setIsApproverOpen(true)}
         onOpenSecurity={() => setIsSecurityOpen(true)}
         onOpenAdvisorChat={() => setIsMentorOpen(true)}
-        onOpenLiveVoice={() => setIsMentorOpen(true)}
+        onOpenLiveVoice={() => setIsSmcSuiteOpen(true)}
       />
 
       <main id="contenido">
         <Hero
           onOpenAdvisorChat={() => setIsMentorOpen(true)}
-          onOpenLiveVoice={() => setIsMentorOpen(true)}
+          onOpenLiveVoice={() => setIsSmcSuiteOpen(true)}
+          onOpenSmcSuite={() => setIsSmcSuiteOpen(true)}
         />
         <Roadmap />
         <FounderBiographySection onOpenAdvisorChat={() => setIsMentorOpen(true)} />
@@ -108,6 +138,36 @@ export const AppContent: React.FC = () => {
         onOpenAdvisorChat={() => setIsMentorOpen(true)}
         onOpenLiveVoice={() => setIsMentorOpen(true)}
       />
+
+      {/* Suite Matemática y Auditoría Algorítmica SMC (100% Funcional y No Simulado) */}
+      <SmcCalculatorValidatorModal
+        isOpen={isSmcSuiteOpen}
+        onClose={() => setIsSmcSuiteOpen(false)}
+        onConsultMentor={(_prompt) => {
+          setIsSmcSuiteOpen(false);
+          setIsMentorOpen(true);
+        }}
+      />
+
+      {/* Centro Integral de Feedback, Sugerencias y Correcciones */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        defaultCategory={feedbackCategory}
+        defaultModule={feedbackModule}
+      />
+
+      {/* Botón flotante discreto de Feedback y Correcciones */}
+      <button
+        type="button"
+        onClick={() => setIsFeedbackOpen(true)}
+        className="fixed bottom-4 left-4 z-40 px-3.5 py-2 rounded-full bg-[#03140e]/95 hover:bg-[#062319] border border-amber-500/40 hover:border-amber-400 text-amber-200 text-xs font-bold shadow-[0_10px_25px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95 group"
+        title="Enviar Feedback, Sugerencias o Correcciones de la plataforma"
+      >
+        <span className="text-sm">📨</span>
+        <span className="hidden sm:inline">Feedback &amp; Correcciones</span>
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse group-hover:scale-125" />
+      </button>
 
       {/* Aviso Oficial y Gestión de Uso de Cookies */}
       <CookieConsentBanner />

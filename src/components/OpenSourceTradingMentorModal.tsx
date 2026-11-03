@@ -1411,13 +1411,36 @@ export const OpenSourceTradingMentorModal: React.FC<OpenSourceTradingMentorModal
             }}
           >
             <div style={{ maxWidth: '820px', margin: '0 auto', width: '100%' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#f8fafc', fontWeight: 700 }}>
-                  🧮 Calculadora de Lotaje Institucional (Al-Hadiqa Shield)
-                </h3>
-                <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.86rem' }}>
-                  Determina con precisión matemática el tamaño de tu lote según tu capital y distancia de Stop Loss para no sobreapalancarte jamás.
-                </p>
+              <div style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#f8fafc', fontWeight: 700 }}>
+                    🧮 Calculadora de Lotaje Institucional (Al-Hadiqa Shield)
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.86rem' }}>
+                    Determina con precisión matemática el tamaño de tu lote según tu capital y distancia de Stop Loss para no sobreapalancarte jamás.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('al_hadiqa_open_smc_suite'));
+                    }
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    color: '#03140e',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(16,185,129,0.3)',
+                  }}
+                >
+                  ⚡ Abrir Suite SMC Completa No Simulada &rarr;
+                </button>
               </div>
 
               <div
@@ -1665,13 +1688,36 @@ export const OpenSourceTradingMentorModal: React.FC<OpenSourceTradingMentorModal
             }}
           >
             <div style={{ maxWidth: '820px', margin: '0 auto', width: '100%' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#f8fafc', fontWeight: 700 }}>
-                  🔍 Validador de Setups Institucionales (Checklist SMC)
-                </h3>
-                <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.86rem' }}>
-                  Evalúa la calidad probabilística de tu operación antes de arriesgar capital. No entres al mercado si tu setup no cumple al menos el 70%.
-                </p>
+              <div style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#f8fafc', fontWeight: 700 }}>
+                    🔍 Validador de Setups Institucionales (Checklist SMC)
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.86rem' }}>
+                    Evalúa la calidad probabilística de tu operación antes de arriesgar capital. No entres al mercado si tu setup no cumple al menos el 70%.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('al_hadiqa_open_smc_suite'));
+                    }
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    color: '#03140e',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(16,185,129,0.3)',
+                  }}
+                >
+                  ⚡ Abrir Suite SMC Completa No Simulada &rarr;
+                </button>
               </div>
 
               {/* LISTA DE PUNTOS CRÍTICOS */}

@@ -182,5 +182,15 @@ service cloud.firestore {
       allow get, list, create: if isBootstrappedAdmin();
       allow update, delete: if false;
     }
+
+    // Buzón de Feedback, Sugerencias y Correcciones Integrales
+    match /feedback_reports/{reportId} {
+      // Cualquier usuario o visitante puede enviar feedback o reporte de corrección
+      allow create: if true;
+      // Lectura permitida al Administrador Maestro o al autor si está autenticado
+      allow get, list: if isBootstrappedAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // Actualización (cambio de estado, respuesta del admin) y borrado exclusivo del Administrador
+      allow update, delete: if isBootstrappedAdmin();
+    }
   }
 }

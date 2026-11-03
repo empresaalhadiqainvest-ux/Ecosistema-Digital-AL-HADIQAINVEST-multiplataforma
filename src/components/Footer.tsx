@@ -93,6 +93,28 @@ export const Footer: React.FC = () => {
             >
               🍪 Aviso y Configuración de Cookies
             </button>
+            <span className="sep" aria-hidden="true">|</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('al_hadiqa_open_feedback'));
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#38bdf8',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                padding: 0
+              }}
+              title="Enviar comentarios, sugerencias o reporte de correcciones"
+            >
+              📨 Feedback &amp; Correcciones
+            </button>
           </p>
         </div>
       </div>

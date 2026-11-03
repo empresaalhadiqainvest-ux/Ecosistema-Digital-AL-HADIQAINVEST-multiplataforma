@@ -3,11 +3,22 @@ import React, { useState } from 'react';
 interface HeroProps {
   onOpenAdvisorChat?: () => void;
   onOpenLiveVoice?: () => void;
+  onOpenSmcSuite?: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice }) => {
+export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, onOpenSmcSuite }) => {
   const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
   const coverImageSrc = '/assets/aistudio/presentacion_de_alhadiqa_721bb0bc.jpeg';
+
+  const handleOpenSmc = () => {
+    if (onOpenSmcSuite) {
+      onOpenSmcSuite();
+    } else if (onOpenLiveVoice) {
+      onOpenLiveVoice();
+    } else if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('al_hadiqa_open_smc_suite'));
+    }
+  };
 
   return (
     <section className="hero" id="inicio">
@@ -84,23 +95,24 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice }
                   <span>🦁 Mentor de Trading (Código Abierto)</span>
                 </button>
               )}
-              {onOpenLiveVoice && (
-                <button
-                  type="button"
-                  className="btn btn--emerald"
-                  onClick={onOpenLiveVoice}
-                  style={{
-                    background: 'linear-gradient(135deg, #10B981, #047857)',
-                    borderColor: '#10B981',
-                    boxShadow: '0 0 16px rgba(16, 185, 129, 0.35)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span>🧮 Calculadora &amp; Validador SMC</span>
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn btn--emerald"
+                onClick={handleOpenSmc}
+                style={{
+                  background: 'linear-gradient(135deg, #10B981, #047857)',
+                  borderColor: '#10B981',
+                  boxShadow: '0 0 16px rgba(16, 185, 129, 0.35)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+                title="Abrir Calculador de Lote y Validador SMC No Simulado"
+              >
+                <span>🧮 Calculadora &amp; Validador SMC (Real)</span>
+              </button>
               <a className="btn btn--ghost" href="#clases-en-vivo">
                 <span>🎓 Clases en Vivo</span>
               </a>

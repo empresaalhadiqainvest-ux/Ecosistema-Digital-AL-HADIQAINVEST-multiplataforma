@@ -28,6 +28,20 @@ import {
 import { EmailViewerModal } from './EmailViewerModal';
 import { logAdminAction, subscribeAdminAuditLogs, AdminAuditLogEntry } from '../services/adminAuditService';
 import { generateDatabaseBackup, triggerBackupDownload } from '../services/backupService';
+import {
+  FeedbackReportItem,
+  FeedbackStatus,
+  FeedbackCategory,
+  CATEGORY_LABELS,
+  MODULE_LABELS,
+  STATUS_LABELS,
+  PRIORITY_LABELS,
+} from '../types/feedback';
+import {
+  subscribeFeedbackReports,
+  updateFeedbackStatus,
+  deleteFeedbackReport,
+} from '../services/feedbackService';
 
 interface AdminPanelModalProps {
   isOpen: boolean;
@@ -53,7 +67,11 @@ interface LibraryItem {
 }
 
 export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'classes' | 'chat' | 'library' | 'broadcast' | 'security'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'classes' | 'chat' | 'library' | 'broadcast' | 'security' | 'feedback'>('metrics');
+  const [feedbackReports, setFeedbackReports] = useState<FeedbackReportItem[]>([]);
+  const [feedbackCategoryFilter, setFeedbackCategoryFilter] = useState<'all' | FeedbackCategory>('all');
+  const [feedbackStatusFilter, setFeedbackStatusFilter] = useState<'all' | FeedbackStatus>('all');
+  const [feedbackAdminDrafts, setFeedbackAdminDrafts] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [classes, setClasses] = useState<LiveClassItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -195,6 +213,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     // Admin Action Audit Trail
     const unsubAudit = subscribeAdminAuditLogs((logs) => setAdminAuditLogs(logs));
 
+    // Feedback & Correcciones Listener
+    const unsubFeedback = subscribeFeedbackReports((reports) => setFeedbackReports(reports));
+
     return () => {
       unsubUsers();
       unsubClasses();
@@ -205,6 +226,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       unsubSettings();
       unsubEmails();
       unsubAudit();
+      unsubFeedback();
     };
   }, [isOpen]);
 
@@ -833,6 +855,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
               }}
             >
               🛡️ Auditoría &amp; Seguridad ({adminAuditLogs.length})
+            </button>
+            <button
+              type="button"
+              className={`quiz__btn ${activeTab === 'feedback' ? 'active' : ''}`}
+              onClick={() => setActiveTab('feedback')}
+              style={{
+                padding: '0.45rem 0.95rem',
+                fontSize: '0.82rem',
+                borderColor: activeTab === 'feedback' ? 'var(--gold)' : undefined,
+                color: activeTab === 'feedback' ? 'var(--gold-soft)' : undefined,
+                position: 'relative',
+              }}
+            >
+              📨 Feedback &amp; Correcciones ({feedbackReports.length})
+              {feedbackReports.filter((f) => f.status === 'pendiente').length > 0 && (
+                <span
+                  style={{
+                    marginLeft: '0.35rem',
+                    background: '#ef4444',
+                    color: '#fff',
+                    borderRadius: '10px',
+                    padding: '0.1rem 0.4rem',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {feedbackReports.filter((f) => f.status === 'pendiente').length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -2261,6 +2312,442 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             </div>
           )}
 
+          {/* TAB 8: BUZÓN DE FEEDBACK, SUGERENCIAS Y CORRECCIONES */}
+          {activeTab === 'feedback' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Tarjetas de Resumen KPI */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div style={{ background: 'var(--surface-3)', border: '1px solid var(--line)', padding: '1.25rem', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Total de Reportes
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc', marginTop: '0.25rem' }}>
+                    {feedbackReports.length}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.2rem' }}>
+                    Sugerencias, correcciones y avisos
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--surface-3)', border: '1px solid #f59e0b', padding: '1.25rem', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#fde68a', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Pendientes de Revisión
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.25rem' }}>
+                    {feedbackReports.filter((f) => f.status === 'pendiente').length}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#fde68a', marginTop: '0.2rem' }}>
+                    Requieren atención técnica
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--surface-3)', border: '1px solid var(--emerald)', padding: '1.25rem', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#a7f3d0', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Resueltos / Aplicados
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--emerald)', marginTop: '0.25rem' }}>
+                    {feedbackReports.filter((f) => f.status === 'resuelto').length}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#a7f3d0', marginTop: '0.2rem' }}>
+                    Mejoras implementadas
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--surface-3)', border: '1px solid var(--gold)', padding: '1.25rem', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--gold-soft)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    Calificación Promedio
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--gold)', marginTop: '0.25rem' }}>
+                    {(() => {
+                      const ratings = feedbackReports.filter((f) => typeof f.rating === 'number' && f.rating > 0);
+                      if (ratings.length === 0) return '5.0 ★';
+                      const avg = ratings.reduce((acc, curr) => acc + (curr.rating || 0), 0) / ratings.length;
+                      return `${avg.toFixed(1)} ★`;
+                    })()}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--gold-soft)', marginTop: '0.2rem' }}>
+                    Satisfacción global de alumnos
+                  </div>
+                </div>
+              </div>
+
+              {/* Filtros de Categoría y Estado */}
+              <div
+                style={{
+                  background: 'var(--surface-3)',
+                  border: '1px solid var(--line)',
+                  padding: '1rem',
+                  borderRadius: 'var(--radius-sm)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 600 }}>Categoría:</span>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackCategoryFilter('all')}
+                    className={`quiz__btn ${feedbackCategoryFilter === 'all' ? 'active' : ''}`}
+                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                  >
+                    Todos ({feedbackReports.length})
+                  </button>
+                  {(Object.keys(CATEGORY_LABELS) as FeedbackCategory[]).map((cat) => {
+                    const info = CATEGORY_LABELS[cat];
+                    const count = feedbackReports.filter((f) => f.category === cat).length;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setFeedbackCategoryFilter(cat)}
+                        className={`quiz__btn ${feedbackCategoryFilter === cat ? 'active' : ''}`}
+                        style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                      >
+                        {info.icon} {info.label.split(' ')[0]} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 600 }}>Estado:</span>
+                  <select
+                    value={feedbackStatusFilter}
+                    onChange={(e) => setFeedbackStatusFilter(e.target.value as any)}
+                    style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--line)',
+                      color: 'var(--text)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.78rem',
+                    }}
+                  >
+                    <option value="all">Todos los Estados</option>
+                    <option value="pendiente">Solo Pendientes</option>
+                    <option value="en_revision">En Evaluación Técnica</option>
+                    <option value="resuelto">Resueltos / Aplicados</option>
+                    <option value="descartado">Descartados / Cerrados</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Lista de Reportes */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {(() => {
+                  const filtered = feedbackReports.filter((item) => {
+                    if (feedbackCategoryFilter !== 'all' && item.category !== feedbackCategoryFilter) return false;
+                    if (feedbackStatusFilter !== 'all' && item.status !== feedbackStatusFilter) return false;
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div
+                        style={{
+                          background: 'var(--surface-3)',
+                          border: '1px solid var(--line)',
+                          padding: '3rem 1rem',
+                          borderRadius: 'var(--radius-sm)',
+                          textAlign: 'center',
+                          color: 'var(--muted)',
+                        }}
+                      >
+                        <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.5rem' }}>📭</span>
+                        <strong style={{ fontSize: '1rem', color: '#f8fafc', display: 'block' }}>
+                          No hay reportes de feedback en esta categoría
+                        </strong>
+                        <span style={{ fontSize: '0.82rem', marginTop: '0.25rem', display: 'block' }}>
+                          Los aportes, sugerencias y correcciones enviadas por los alumnos aparecerán aquí en tiempo real.
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((item) => {
+                    const catInfo = CATEGORY_LABELS[item.category] || CATEGORY_LABELS.sugerencia;
+                    const statusInfo = STATUS_LABELS[item.status] || STATUS_LABELS.pendiente;
+                    const priorityInfo = PRIORITY_LABELS[item.priority] || PRIORITY_LABELS.media;
+                    const draft = feedbackAdminDrafts[item.id] !== undefined ? feedbackAdminDrafts[item.id] : item.adminResponse || '';
+
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: 'var(--surface-3)',
+                          border: `1px solid ${item.status === 'pendiente' ? '#f59e0b' : item.status === 'resuelto' ? 'var(--emerald)' : 'var(--line)'}`,
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '1.25rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.85rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '6px',
+                                background: `${catInfo.color}15`,
+                                border: `1px solid ${catInfo.color}40`,
+                                color: catInfo.color,
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              <span>{catInfo.icon}</span>
+                              <span>{catInfo.label}</span>
+                            </span>
+
+                            <span
+                              style={{
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(255,255,255,0.06)',
+                                fontSize: '0.72rem',
+                                color: priorityInfo.color,
+                                fontWeight: 600,
+                              }}
+                            >
+                              Prioridad: {priorityInfo.label}
+                            </span>
+
+                            <span
+                              style={{
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '6px',
+                                background: 'rgba(56, 189, 248, 0.1)',
+                                border: '1px solid rgba(56, 189, 248, 0.3)',
+                                fontSize: '0.72rem',
+                                color: '#38bdf8',
+                              }}
+                            >
+                              Módulo: {MODULE_LABELS[item.module] || item.module}
+                            </span>
+                          </div>
+
+                          <span
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: '20px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              color: statusInfo.color,
+                              background: `${statusInfo.color}15`,
+                              border: `1px solid ${statusInfo.color}40`,
+                            }}
+                          >
+                            ● {statusInfo.label}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#f8fafc', fontWeight: 700 }}>
+                            {item.title}
+                          </h4>
+                          <p style={{ margin: '0.5rem 0 0', fontSize: '0.86rem', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                            {item.description}
+                          </p>
+                        </div>
+
+                        {item.rating && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#facc15', fontSize: '1.1rem' }}>
+                            {'★'.repeat(item.rating)}
+                            <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginLeft: '0.3rem' }}>
+                              ({item.rating} de 5 estrellas otorgadas)
+                            </span>
+                          </div>
+                        )}
+
+                        {item.stepsToReproduce && (
+                          <div style={{ background: 'rgba(0,0,0,0.4)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--line)' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                              Pasos para reproducir reportados:
+                            </div>
+                            <pre style={{ margin: 0, fontSize: '0.78rem', color: '#e2e8f0', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                              {item.stepsToReproduce}
+                            </pre>
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--line)', fontSize: '0.76rem', color: 'var(--muted)' }}>
+                          <div>
+                            Remitente: <strong style={{ color: '#fff' }}>{item.userName}</strong> ({item.userEmail || 'Sin email'}) · Rol: {item.userRole}
+                          </div>
+                          <div>
+                            Ticket ID: <code style={{ color: 'var(--gold-soft)' }}>{item.id}</code>
+                          </div>
+                        </div>
+
+                        {/* Área de Resolución y Respuesta del Administrador */}
+                        <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.76rem', color: 'var(--gold-soft)', fontWeight: 700 }}>
+                              👑 Resolución y Respuesta del Sr. Smith / Equipo Técnico:
+                            </span>
+                            {item.adminResponse && (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--emerald)', fontWeight: 600 }}>
+                                ✓ Respuesta registrada
+                              </span>
+                            )}
+                          </div>
+
+                          <input
+                            type="text"
+                            placeholder="Escribe una nota interna o respuesta institucional para este ticket…"
+                            value={draft}
+                            onChange={(e) => setFeedbackAdminDrafts((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                            style={{
+                              background: 'var(--surface)',
+                              border: '1px solid var(--line)',
+                              color: '#fff',
+                              borderRadius: '6px',
+                              padding: '0.5rem 0.75rem',
+                              fontSize: '0.8rem',
+                            }}
+                          />
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await updateFeedbackStatus(item.id, 'en_revision', draft);
+                                    await logAdminAction({
+                                      adminUid: 'admin',
+                                      adminEmail: 'empresaalhadiqainvest@gmail.com',
+                                      actionType: 'UPDATE_SECURITY_POLICY',
+                                      targetType: 'system',
+                                      targetId: item.id,
+                                      details: `Ticket en evaluación técnica: ${item.title}`,
+                                    });
+                                    showNotification('Ticket marcado: En Evaluación Técnica');
+                                  } catch (err) {
+                                    console.error(err);
+                                    showNotification('Error al actualizar estado');
+                                  }
+                                }}
+                                style={{
+                                  background: 'rgba(56, 189, 248, 0.15)',
+                                  border: '1px solid #38bdf8',
+                                  color: '#38bdf8',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ⏳ Marcar En Evaluación
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await updateFeedbackStatus(item.id, 'resuelto', draft || 'Mejora o corrección verificada y aplicada en la plataforma.');
+                                    await logAdminAction({
+                                      adminUid: 'admin',
+                                      adminEmail: 'empresaalhadiqainvest@gmail.com',
+                                      actionType: 'UPDATE_SECURITY_POLICY',
+                                      targetType: 'system',
+                                      targetId: item.id,
+                                      details: `Ticket resuelto y aplicado: ${item.title}`,
+                                    });
+                                    showNotification('Ticket marcado: Resuelto / Aplicado');
+                                  } catch (err) {
+                                    console.error(err);
+                                    showNotification('Error al actualizar estado');
+                                  }
+                                }}
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.2)',
+                                  border: '1px solid var(--emerald)',
+                                  color: 'var(--emerald)',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ✓ Marcar como Resuelto
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await updateFeedbackStatus(item.id, 'descartado', draft);
+                                    showNotification('Ticket marcado: Cerrado');
+                                  } catch (err) {
+                                    console.error(err);
+                                    showNotification('Error al actualizar estado');
+                                  }
+                                }}
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  border: '1px solid var(--line)',
+                                  color: 'var(--muted)',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.72rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Cerrar
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (window.confirm(`¿Seguro que deseas eliminar permanentemente el ticket "${item.title}"?`)) {
+                                  try {
+                                    await deleteFeedbackReport(item.id);
+                                    await logAdminAction({
+                                      adminUid: 'admin',
+                                      adminEmail: 'empresaalhadiqainvest@gmail.com',
+                                      actionType: 'UPDATE_SECURITY_POLICY',
+                                      targetType: 'system',
+                                      targetId: item.id,
+                                      details: `Ticket eliminado: ${item.title}`,
+                                    });
+                                    showNotification('Ticket eliminado correctamente');
+                                  } catch (err) {
+                                    console.error(err);
+                                    showNotification('Error al eliminar ticket');
+                                  }
+                                }
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#f87171',
+                                fontSize: '0.72rem',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              Eliminar ticket
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

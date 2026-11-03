@@ -545,6 +545,24 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </button>
               )}
+
+              <button
+                type="button"
+                className="drawer-tool-card"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('al_hadiqa_open_feedback'));
+                  }
+                  closeMenu();
+                }}
+                title="Abrir Centro de Feedback, Sugerencias y Correcciones"
+              >
+                <span className="drawer-tool-icon">📨</span>
+                <div>
+                  <div className="drawer-tool-title">Feedback &amp; Corrección</div>
+                  <div className="drawer-tool-desc">Buzón y Sugerencias</div>
+                </div>
+              </button>
             </div>
           </div>
         </nav>

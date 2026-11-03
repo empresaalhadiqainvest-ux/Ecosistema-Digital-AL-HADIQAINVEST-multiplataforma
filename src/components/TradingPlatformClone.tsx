@@ -395,6 +395,32 @@ export const TradingPlatformClone: React.FC = () => {
                 </label>
               ))}
             </div>
+
+            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--line)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem' }}>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)' }}>
+                ¿Deseas verificar matemáticamente tu lotaje exacto, ratio R:R y confluencias algorítmicas sin simulaciones?
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('al_hadiqa_open_smc_suite'));
+                  }
+                }}
+                className="btn btn--emerald"
+                style={{
+                  background: 'linear-gradient(135deg, #10B981, #047857)',
+                  borderColor: '#10B981',
+                  boxShadow: '0 0 16px rgba(16, 185, 129, 0.35)',
+                  fontSize: '0.88rem',
+                  padding: '0.65rem 1.25rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <span>🧮 Abrir Calculador &amp; Validador SMC No Simulado</span>
+                <span className="arrow" aria-hidden="true">&rarr;</span>
+              </button>
+            </div>
           </div>
         </div>
 
