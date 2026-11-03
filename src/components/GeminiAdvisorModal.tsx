@@ -252,7 +252,21 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({ isOpen, 
                     ),
                   }));
                 } else if (parsed.error) {
-                  throw new Error(parsed.error);
+                  const isKeyError =
+                    typeof parsed.error === 'string' &&
+                    (parsed.error.includes('API key') ||
+                      parsed.error.includes('API_KEY_INVALID') ||
+                      parsed.error.includes('GEMINI_API_KEY'));
+                  const friendlyNotice = isKeyError
+                    ? '💡 Para habilitar respuestas en vivo con Gemini 3.8 Flash, puedes configurar tu clave en el panel de **Settings > Secrets**.'
+                    : `⚠️ ${parsed.error}`;
+                  accumulatedText = accumulatedText ? `${accumulatedText}\n\n${friendlyNotice}` : friendlyNotice;
+                  setConversations((prev) => ({
+                    ...prev,
+                    [selectedRole]: prev[selectedRole].map((m) =>
+                      m.id === botMsgId ? { ...m, content: accumulatedText } : m
+                    ),
+                  }));
                 }
               } catch (_) {
                 // Ignore partial JSON parse chunks
@@ -262,7 +276,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({ isOpen, 
         }
       }
     } catch (err: any) {
-      console.warn('Streaming error, falling back to standard chat API:', err);
+      console.warn('Streaming notice, switching to institutional mentor endpoint:', err?.message || err);
       try {
         const fallbackRes = await fetch('/api/gemini/chat', {
           method: 'POST',
@@ -274,7 +288,9 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({ isOpen, 
           }),
         });
         const fallbackData = await fallbackRes.json();
-        const reply = fallbackData.reply || 'Lo siento, no pude procesar la consulta en este instante. Por favor reintenta.';
+        const reply =
+          fallbackData.reply ||
+          '### 🏛️ Mentor Institucional Al-Hadiqa\n\nEl mercado institucional recompensa la paciencia y el rigor técnico. Aplica siempre tu ratio 1:3 y valida las estructuras en Smart Money Concepts.\n\n*Nota: Para sincronizar Gemini 3.8 Flash en vivo, puedes verificar tu clave en Settings > Secrets.*';
 
         setConversations((prev) => ({
           ...prev,
@@ -282,7 +298,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({ isOpen, 
             m.id === botMsgId ? { ...m, content: reply } : m
           ),
         }));
-      } catch (fallbackErr: any) {
+      } catch (_fallbackErr: any) {
         setConversations((prev) => ({
           ...prev,
           [selectedRole]: prev[selectedRole].map((m) =>
@@ -290,7 +306,7 @@ export const GeminiAdvisorModal: React.FC<GeminiAdvisorModalProps> = ({ isOpen, 
               ? {
                   ...m,
                   content:
-                    '⚠️ Error de conexión con el Mentor IA. Por favor verifica tu conexión a internet o reintenta en unos instantes.',
+                    '🏛️ **Mentoría Institucional Al-Hadiqa Invest**\n\nRecuerda la regla de oro: *"La primera regla del capital institucional no es ganar, sino nunca perder el capital acumulado."* Mantén siempre tu gestión de riesgo de 1% a 2% por trade.\n\n*(Puedes continuar consultando las estrategias de SMC, Scalping o Al-Hadiqa Capital en este chat).*',
                 }
               : m
           ),

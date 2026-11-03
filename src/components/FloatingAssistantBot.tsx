@@ -610,8 +610,8 @@ export const FloatingAssistantBot: React.FC<FloatingAssistantBotProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                <span>🧠</span>
-                <span>Mentor Gemini IA</span>
+                <span>🦁</span>
+                <span>Mentor Trading</span>
               </button>
             )}
             {onOpenLiveVoice && (
@@ -637,8 +637,8 @@ export const FloatingAssistantBot: React.FC<FloatingAssistantBotProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                <span>🎙️</span>
-                <span>Voz en Vivo</span>
+                <span>🧮</span>
+                <span>Lotaje &amp; SMC</span>
               </button>
             )}
           </div>

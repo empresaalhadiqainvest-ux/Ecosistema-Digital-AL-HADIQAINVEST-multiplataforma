@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { Background3D } from './components/Background3D';
 import { Header } from './components/Header';
@@ -24,16 +24,31 @@ import { StudentPortalModal } from './components/StudentPortalModal';
 import { PartnerApproverModal } from './components/PartnerApproverModal';
 import { FloatingAssistantBot } from './components/FloatingAssistantBot';
 import { SecurityComplianceModal } from './components/SecurityComplianceModal';
-import { GeminiAdvisorModal } from './components/GeminiAdvisorModal';
-import { GeminiLiveVoiceModal } from './components/GeminiLiveVoiceModal';
+import { OpenSourceTradingMentorModal } from './components/OpenSourceTradingMentorModal';
+import { CookieConsentBanner } from './components/CookieConsentBanner';
 
 export const AppContent: React.FC = () => {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isStudentPortalOpen, setIsStudentPortalOpen] = useState(false);
   const [isApproverOpen, setIsApproverOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
-  const [isAdvisorChatOpen, setIsAdvisorChatOpen] = useState(false);
-  const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
+  const [isMentorOpen, setIsMentorOpen] = useState(false);
+
+  // Asegura que al cargar la aplicación inmediatamente cargue desde el inicio ("Holding & Academia")
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    // Scroll instantáneo al tope (0, 0)
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+
+    // Refuerzo para asegurar el inicio tras pintar componentes pesados
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <>
@@ -47,17 +62,17 @@ export const AppContent: React.FC = () => {
         onOpenProfile={() => setIsStudentPortalOpen(true)}
         onOpenApprover={() => setIsApproverOpen(true)}
         onOpenSecurity={() => setIsSecurityOpen(true)}
-        onOpenAdvisorChat={() => setIsAdvisorChatOpen(true)}
-        onOpenLiveVoice={() => setIsLiveVoiceOpen(true)}
+        onOpenAdvisorChat={() => setIsMentorOpen(true)}
+        onOpenLiveVoice={() => setIsMentorOpen(true)}
       />
 
       <main id="contenido">
         <Hero
-          onOpenAdvisorChat={() => setIsAdvisorChatOpen(true)}
-          onOpenLiveVoice={() => setIsLiveVoiceOpen(true)}
+          onOpenAdvisorChat={() => setIsMentorOpen(true)}
+          onOpenLiveVoice={() => setIsMentorOpen(true)}
         />
         <Roadmap />
-        <FounderBiographySection onOpenAdvisorChat={() => setIsAdvisorChatOpen(true)} />
+        <FounderBiographySection onOpenAdvisorChat={() => setIsMentorOpen(true)} />
         <TradingSection />
         <TradingPlatformClone />
         <StreamingHubSection />
@@ -81,24 +96,21 @@ export const AppContent: React.FC = () => {
       <PartnerApproverModal isOpen={isApproverOpen} onClose={() => setIsApproverOpen(false)} />
       <SecurityComplianceModal isOpen={isSecurityOpen} onClose={() => setIsSecurityOpen(false)} />
 
-      {/* Funciones de IA Integradas: Mentor Gemini Multi-Turn & Live Voice API */}
-      <GeminiAdvisorModal
-        isOpen={isAdvisorChatOpen}
-        onClose={() => setIsAdvisorChatOpen(false)}
-        onOpenLiveVoice={() => setIsLiveVoiceOpen(true)}
-      />
-      <GeminiLiveVoiceModal
-        isOpen={isLiveVoiceOpen}
-        onClose={() => setIsLiveVoiceOpen(false)}
-        onOpenAdvisorChat={() => setIsAdvisorChatOpen(true)}
+      {/* Mentor de Trading Gratuito de Código Abierto (SMC, Lotaje, Validador y Voz Nativa) */}
+      <OpenSourceTradingMentorModal
+        isOpen={isMentorOpen}
+        onClose={() => setIsMentorOpen(false)}
       />
 
-      {/* Bot Asistente Flotante Integrado (Guía para Nuevos Usuarios, Clases, Chat, Biblioteca, Permisos y Accesos IA) */}
+      {/* Bot Asistente Flotante Integrado (Guía para Nuevos Usuarios, Clases, Chat, Biblioteca, Permisos y Mentor) */}
       <FloatingAssistantBot
         onOpenStudentPortal={() => setIsStudentPortalOpen(true)}
-        onOpenAdvisorChat={() => setIsAdvisorChatOpen(true)}
-        onOpenLiveVoice={() => setIsLiveVoiceOpen(true)}
+        onOpenAdvisorChat={() => setIsMentorOpen(true)}
+        onOpenLiveVoice={() => setIsMentorOpen(true)}
       />
+
+      {/* Aviso Oficial y Gestión de Uso de Cookies */}
+      <CookieConsentBanner />
     </>
   );
 };

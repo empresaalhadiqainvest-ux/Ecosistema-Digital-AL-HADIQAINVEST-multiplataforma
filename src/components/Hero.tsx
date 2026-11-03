@@ -65,6 +65,25 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice }
                 <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 0 8px #fff' }}></span>
                 <span>🔴 Streaming en Vivo</span>
               </a>
+              {onOpenAdvisorChat && (
+                <button
+                  type="button"
+                  className="btn btn--gold"
+                  onClick={onOpenAdvisorChat}
+                  style={{
+                    background: 'linear-gradient(135deg, #c5a880, #856d48)',
+                    borderColor: '#c5a880',
+                    color: '#07111f',
+                    boxShadow: '0 0 16px rgba(197, 168, 128, 0.35)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 700,
+                  }}
+                >
+                  <span>🦁 Mentor de Trading (Código Abierto)</span>
+                </button>
+              )}
               {onOpenLiveVoice && (
                 <button
                   type="button"
@@ -79,24 +98,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice }
                     gap: '6px',
                   }}
                 >
-                  <span>🎙️ Voz en Vivo (Live API)</span>
-                </button>
-              )}
-              {onOpenAdvisorChat && (
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  onClick={onOpenAdvisorChat}
-                  style={{
-                    borderColor: 'rgba(197, 168, 128, 0.6)',
-                    color: 'var(--gold)',
-                    background: 'rgba(197, 168, 128, 0.12)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span>🧠 Mentor Gemini IA</span>
+                  <span>🧮 Calculadora &amp; Validador SMC</span>
                 </button>
               )}
               <a className="btn btn--ghost" href="#clases-en-vivo">

@@ -489,7 +489,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="drawer-group">
             <div className="drawer-group-title">
               <span>⚡</span>
-              <span>Herramientas IA &amp; Seguridad</span>
+              <span>Mentoría Institucional &amp; Seguridad</span>
             </div>
             <div className="drawer-tools-grid">
               {onOpenAdvisorChat && (
@@ -500,12 +500,12 @@ export const Header: React.FC<HeaderProps> = ({
                     onOpenAdvisorChat();
                     closeMenu();
                   }}
-                  title="Abrir Mentor Gemini IA"
+                  title="Abrir Mentor Institucional de Trading (Código Abierto)"
                 >
-                  <span className="drawer-tool-icon">🧠</span>
+                  <span className="drawer-tool-icon">🦁</span>
                   <div>
-                    <div className="drawer-tool-title">Mentor Gemini IA</div>
-                    <div className="drawer-tool-desc">Consultas y orientación</div>
+                    <div className="drawer-tool-title">Mentor de Trading</div>
+                    <div className="drawer-tool-desc">Código Abierto · SMC &amp; Riesgo</div>
                   </div>
                 </button>
               )}
@@ -518,12 +518,12 @@ export const Header: React.FC<HeaderProps> = ({
                     onOpenLiveVoice();
                     closeMenu();
                   }}
-                  title="Abrir Gemini Live Voice"
+                  title="Abrir Calculadora & Herramientas de Trading"
                 >
-                  <span className="drawer-tool-icon">🎙️</span>
+                  <span className="drawer-tool-icon">🧮</span>
                   <div>
-                    <div className="drawer-tool-title">Voz en Vivo</div>
-                    <div className="drawer-tool-desc">Conversación en audio</div>
+                    <div className="drawer-tool-title">Lotaje &amp; Voz</div>
+                    <div className="drawer-tool-desc">Calculadora y Síntesis</div>
                   </div>
                 </button>
               )}

@@ -4984,6 +4984,274 @@ ul {
   border-color: var(--gold);
 }
 
+/* Placeholder de Respaldo Ilustrado para el Retrato */
+.portrait-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 35%, rgba(8, 42, 30, 0.95), rgba(2, 16, 11, 0.99));
+  padding: 2rem 1.5rem;
+  text-align: center;
+  gap: 0.85rem;
+}
+
+.placeholder-crest {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(16, 185, 129, 0.2));
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.35);
+}
+
+.placeholder-lion {
+  font-size: 2.5rem;
+}
+
+.placeholder-initials {
+  font-family: var(--font-head);
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.placeholder-caption {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.placeholder-sub {
+  font-size: 0.78rem;
+  color: var(--gold-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Pestaña Lectura Completa */
+.founder-tab-btn--all {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--gold);
+}
+
+.founder-tab-btn--all.is-active {
+  background: linear-gradient(135deg, var(--gold), #d4af37);
+  color: #03140e;
+}
+
+/* Lista de Viñetas Estructuradas */
+.structured-bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.bullet-card {
+  background: rgba(3, 20, 14, 0.6);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.94rem;
+  color: #d1d5db;
+  line-height: 1.6;
+}
+
+.bullet-card--highlight {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(3, 20, 14, 0.85));
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.bullet-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.bullet-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+/* Bloque Pregunta y Respuesta AL-HADIQA INVEST */
+.holding-inquiry-box {
+  background: rgba(3, 20, 14, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 14px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inquiry-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--gold);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 0.65rem;
+}
+
+.inquiry-items-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 680px) {
+  .inquiry-items-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inquiry-item {
+  background: rgba(2, 16, 11, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-radius: 10px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: #d1d5db;
+  line-height: 1.55;
+}
+
+.inquiry-item--full {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(6, 35, 25, 0.85), rgba(2, 16, 11, 0.95));
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.inquiry-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.inquiry-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Panel de Lectura Completa Oficial */
+.bio-full-document-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: rgba(2, 16, 11, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 14px;
+  padding: 2rem;
+  animation: bioFadeIn 0.3s ease forwards;
+}
+
+.full-doc-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.full-doc-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+
+.full-doc-heading {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.full-doc-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.4), transparent);
+  margin: 0.5rem 0;
+}
+
+.full-doc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.94rem;
+  color: #d1d5db;
+  line-height: 1.65;
+}
+
+.full-doc-section-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--gold);
+  margin-bottom: 0.25rem;
+}
+
+.full-doc-subheading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 0.5rem;
+}
+
+.full-doc-list {
+  padding-left: 1.25rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.full-doc-list li {
+  color: #d1d5db;
+  line-height: 1.6;
+}
+
+.full-doc-quote {
+  font-family: var(--font-head);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--gold-soft);
+  font-style: italic;
+  border-left: 3px solid var(--gold);
+  padding: 0.75rem 1.25rem;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 0 10px 10px 0;
+  margin: 0.75rem 0;
+}
+
+.founder-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

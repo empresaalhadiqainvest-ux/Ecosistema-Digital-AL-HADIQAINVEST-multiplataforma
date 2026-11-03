@@ -67,10 +67,32 @@ export const Footer: React.FC = () => {
 
         <div className="footer-bottom">
           <p>&copy; 2026 AL-HADIQA INVEST. «Cultivando el crecimiento, nutriendo su capital». Todos los derechos reservados.</p>
-          <p className="footer-credit">
+          <p className="footer-credit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
             <span>Derechos de autor &copy; 2026 <strong>Smith Business Solutions</strong></span>
             <span className="sep" aria-hidden="true">|</span>
             <span>Diseño y desarrollo</span>
+            <span className="sep" aria-hidden="true">|</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('al_hadiqa_open_cookies'));
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--gold-soft)',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                padding: 0
+              }}
+              title="Administrar preferencias de cookies y privacidad"
+            >
+              🍪 Aviso y Configuración de Cookies
+            </button>
           </p>
         </div>
       </div>
