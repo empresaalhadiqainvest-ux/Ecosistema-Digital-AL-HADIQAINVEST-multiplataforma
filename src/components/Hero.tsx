@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { trackEvent } from '../utils/analytics';
 
 interface HeroProps {
   onOpenAdvisorChat?: () => void;
@@ -53,75 +54,129 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, 
               y la disciplina estratégica en un entorno tecnológico seguro y en tiempo real.
             </p>
 
-            {/* Botones de acción principales */}
-            <div className="hero__actions">
-              <a className="btn" href="#roadmap">
-                <span>🧭 Roadmap del Alumno</span>
-                <span className="arrow" aria-hidden="true">&rarr;</span>
-              </a>
-              <a
-                className="btn"
-                href="#streaming"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.95))',
-                  borderColor: '#ef4444',
-                  color: '#ffffff',
-                  boxShadow: '0 0 18px rgba(239, 68, 68, 0.4)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 700,
-                }}
-              >
-                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 0 8px #fff' }}></span>
-                <span>🔴 Streaming en Vivo</span>
-              </a>
-              {onOpenAdvisorChat && (
-                <button
-                  type="button"
-                  className="btn btn--gold"
-                  onClick={onOpenAdvisorChat}
+            {/* CTA ÚNICO Y CLARO: Embudo principal de conversión del alumno */}
+            <div className="hero__actions" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', alignItems: 'center' }}>
+                <a
+                  className="btn"
+                  href="#roadmap"
+                  onClick={() => {
+                    trackEvent('cta_click_main_hero', {
+                      cta_label: 'Comenzar Formación Institucional',
+                      target: '#roadmap',
+                    });
+                  }}
                   style={{
-                    background: 'linear-gradient(135deg, #c5a880, #856d48)',
-                    borderColor: '#c5a880',
-                    color: '#07111f',
-                    boxShadow: '0 0 16px rgba(197, 168, 128, 0.35)',
+                    background: 'linear-gradient(135deg, #fce072 0%, #d4af37 45%, #997b2d 100%)',
+                    color: '#03140e',
+                    fontWeight: 800,
+                    fontSize: '1.02rem',
+                    padding: '0.95rem 2rem',
+                    borderRadius: '14px',
+                    boxShadow: '0 10px 25px rgba(212, 175, 55, 0.45)',
+                    border: '1px solid rgba(255, 242, 178, 0.6)',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    fontWeight: 700,
+                    gap: '10px',
+                    textDecoration: 'none',
+                    letterSpacing: '0.01em',
                   }}
                 >
-                  <span>🦁 Mentor de Trading (Código Abierto)</span>
+                  <span>🚀 Comenzar Formación Institucional</span>
+                  <span className="arrow" aria-hidden="true" style={{ fontSize: '1.15rem' }}>&rarr;</span>
+                </a>
+
+                {onOpenAdvisorChat && (
+                  <button
+                    type="button"
+                    className="btn btn--gold"
+                    onClick={() => {
+                      trackEvent('cta_click_mentor_hero', { target: 'mentor_modal' });
+                      onOpenAdvisorChat();
+                    }}
+                    style={{
+                      background: 'rgba(9, 51, 37, 0.85)',
+                      border: '1px solid rgba(212, 175, 55, 0.4)',
+                      color: '#f8fafc',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      padding: '0.95rem 1.4rem',
+                      borderRadius: '14px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      backdropFilter: 'blur(8px)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span>🦁 Mentor de Trading (Código Abierto)</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Atajos Rápidos Complementarios para Alumnos */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', fontSize: '0.78rem' }}>
+                <span style={{ color: 'var(--muted)', fontWeight: 600, marginRight: '4px' }}>
+                  Accesos directos:
+                </span>
+                <a
+                  href="#streaming"
+                  style={{
+                    color: '#fca5a5',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  🔴 Streaming en Vivo
+                </a>
+                <button
+                  type="button"
+                  onClick={handleOpenSmc}
+                  style={{
+                    color: '#6ee7b7',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  🧮 Suite SMC Real
                 </button>
-              )}
-              <button
-                type="button"
-                className="btn btn--emerald"
-                onClick={handleOpenSmc}
-                style={{
-                  background: 'linear-gradient(135deg, #10B981, #047857)',
-                  borderColor: '#10B981',
-                  boxShadow: '0 0 16px rgba(16, 185, 129, 0.35)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-                title="Abrir Calculador de Lote y Validador SMC No Simulado"
-              >
-                <span>🧮 Calculadora &amp; Validador SMC (Real)</span>
-              </button>
-              <a className="btn btn--ghost" href="#clases-en-vivo">
-                <span>🎓 Clases en Vivo</span>
-              </a>
-              <a className="btn btn--ghost" href="#capital">
-                <span>🏛️ AL-HADIQA Capital</span>
-              </a>
-              <a className="btn btn--ghost" href="#biblioteca">
-                <span>📚 Biblioteca</span>
-              </a>
+                <a
+                  href="#clases-en-vivo"
+                  style={{
+                    color: '#93c5fd',
+                    background: 'rgba(59, 130, 246, 0.12)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  🎓 Clases
+                </a>
+                <a
+                  href="#biblioteca"
+                  style={{
+                    color: '#fde68a',
+                    background: 'rgba(212, 175, 55, 0.12)',
+                    border: '1px solid rgba(212, 175, 55, 0.3)',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  📚 Biblioteca
+                </a>
+              </div>
             </div>
 
             {/* Credenciales y garantías */}
@@ -165,12 +220,18 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, 
               </div>
 
               <div className="hero-cover-image-wrapper">
-                <img
-                  src={coverImageSrc}
-                  alt="Presentación oficial de AL-HADIQA INVEST - Cultivando el crecimiento, nutriendo su capital"
-                  className="hero-cover-image"
-                  loading="eager"
-                />
+                <picture>
+                  <source srcSet="/assets/aistudio/presentacion_de_alhadiqa_721bb0bc.webp" type="image/webp" />
+                  <img
+                    src={coverImageSrc}
+                    width={1376}
+                    height={768}
+                    decoding="async"
+                    alt="Presentación oficial de AL-HADIQA INVEST - Cultivando el crecimiento, nutriendo su capital"
+                    className="hero-cover-image"
+                    loading="eager"
+                  />
+                </picture>
                 <div className="hero-cover-overlay">
                   <span className="hero-cover-zoom-icon">🔍 Ampliar Portada</span>
                 </div>
@@ -249,11 +310,17 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, 
             >
               ✕
             </button>
-            <img
-              src={coverImageSrc}
-              alt="Presentación oficial de AL-HADIQA INVEST"
-              className="cover-lightbox-image"
-            />
+            <picture>
+              <source srcSet="/assets/aistudio/presentacion_de_alhadiqa_721bb0bc.webp" type="image/webp" />
+              <img
+                src={coverImageSrc}
+                width={1376}
+                height={768}
+                decoding="async"
+                alt="Presentación institucional de AL-HADIQA INVEST en alta resolución - Portada corporativa con emblema de león dorado, lema 'Cultivando el crecimiento, nutriendo su capital' y pilares de inversión"
+                className="cover-lightbox-image"
+              />
+            </picture>
             <div className="cover-lightbox-footer">
               <h3 style={{ color: 'var(--gold)', fontFamily: 'var(--font-head)', margin: '0 0 0.25rem 0', fontSize: '1.25rem' }}>
                 AL-HADIQA INVEST

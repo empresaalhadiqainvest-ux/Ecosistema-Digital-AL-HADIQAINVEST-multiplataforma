@@ -82,7 +82,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ isOpen
           {profile?.photoURL ? (
             <img
               src={profile.photoURL}
-              alt={profile.displayName}
+              alt={`Fotografía de perfil de ${profile?.displayName || 'alumno de AL-HADIQA INVEST'}`}
               style={{ width: '56px', height: '56px', borderRadius: '50%' }}
             />
           ) : (

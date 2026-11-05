@@ -1,0 +1,11 @@
+# robots.txt para AL-HADIQA INVEST & Ecosistema Digital
+# Holding Empresarial, Trading Institucional SMC y Academia Financiera
+# https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+# Ubicación del Sitemap XML oficial
+Sitemap: https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/sitemap.xml

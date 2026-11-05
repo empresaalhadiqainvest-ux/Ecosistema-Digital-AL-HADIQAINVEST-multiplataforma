@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { initGA4, updateAnalyticsConsent } from '../utils/analytics';
 
 interface CookiePreferences {
   essential: boolean;
@@ -32,11 +33,15 @@ export const CookieConsentBanner: React.FC = () => {
       } else {
         const parsed = JSON.parse(storedConsent);
         if (parsed?.preferences) {
+          const hasAnalytics = Boolean(parsed.preferences.analytics);
           setPreferences({
             essential: true,
             preferences: Boolean(parsed.preferences.preferences),
-            analytics: Boolean(parsed.preferences.analytics),
+            analytics: hasAnalytics,
           });
+          if (hasAnalytics) {
+            initGA4();
+          }
         }
       }
     } catch {
@@ -71,6 +76,7 @@ export const CookieConsentBanner: React.FC = () => {
       console.warn('No se pudo guardar la preferencia de cookies en localStorage:', e);
     }
     setPreferences(prefs);
+    updateAnalyticsConsent(prefs.analytics);
     setIsVisible(false);
     setShowConfigModal(false);
   };
@@ -295,6 +301,28 @@ export const CookieConsentBanner: React.FC = () => {
                     <p>
                       <strong>Terceros:</strong> No comercializamos ni transferimos sus datos de navegación a corredores no regulados o intermediarios externos no autorizados.
                     </p>
+                    <div className="pt-1 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowConfigModal(false);
+                          window.dispatchEvent(new CustomEvent('al_hadiqa_open_legal', { detail: { tab: 'privacy' } }));
+                        }}
+                        className="text-emerald-400 hover:text-emerald-300 underline cursor-pointer text-xs font-semibold"
+                      >
+                        Leer Política de Privacidad &amp; RGPD completa &rarr;
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowConfigModal(false);
+                          window.dispatchEvent(new CustomEvent('al_hadiqa_open_legal', { detail: { tab: 'terms' } }));
+                        }}
+                        className="text-amber-400 hover:text-amber-300 underline cursor-pointer text-xs font-semibold"
+                      >
+                        Términos de Uso &rarr;
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

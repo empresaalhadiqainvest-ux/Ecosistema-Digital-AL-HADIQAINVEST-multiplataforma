@@ -70,9 +70,13 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Logotipo Oficial con León e Identidad de Marca */}
           <a
             className="brand"
-            href="#"
+            href="/"
             aria-label="AL-HADIQA INVEST, volver al inicio"
-            onClick={closeMenu}
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+              closeMenu();
+            }}
           >
             <span className="brand-lion-icon" aria-hidden="true">🦁</span>
             <span>AL-HADIQA <span>INVEST</span></span>
@@ -99,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {profile?.photoURL ? (
                   <img
                     src={profile.photoURL}
-                    alt={profile.displayName || 'Usuario'}
+                    alt={`Fotografía de perfil de ${profile?.displayName || currentUser?.displayName || 'Usuario registrado en la academia'}`}
                     className="header-user-avatar"
                   />
                 ) : (
@@ -216,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {profile?.photoURL ? (
                   <img
                     src={profile.photoURL}
-                    alt={profile.displayName || 'Usuario'}
+                    alt={`Fotografía de perfil de ${profile?.displayName || currentUser?.displayName || 'Usuario de AL-HADIQA INVEST'}`}
                     className="drawer-avatar"
                   />
                 ) : (
@@ -561,6 +565,24 @@ export const Header: React.FC<HeaderProps> = ({
                 <div>
                   <div className="drawer-tool-title">Feedback &amp; Corrección</div>
                   <div className="drawer-tool-desc">Buzón y Sugerencias</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className="drawer-tool-card"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('al_hadiqa_open_legal', { detail: { tab: 'terms' } }));
+                  }
+                  closeMenu();
+                }}
+                title="Consultar Términos, Condiciones y Política de Privacidad"
+              >
+                <span className="drawer-tool-icon">⚖️</span>
+                <div>
+                  <div className="drawer-tool-title">Términos &amp; Privacidad</div>
+                  <div className="drawer-tool-desc">Marco Legal &amp; RGPD</div>
                 </div>
               </button>
             </div>

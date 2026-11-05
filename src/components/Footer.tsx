@@ -6,7 +6,15 @@ export const Footer: React.FC = () => {
       <div className="wrap">
         <div className="footer-grid">
           <div className="footer-brand">
-            <a className="brand" href="#" aria-label="AL-HADIQA INVEST, volver al inicio">
+            <a
+              className="brand"
+              href="/"
+              aria-label="AL-HADIQA INVEST, volver al inicio"
+              onClick={(e) => {
+                e.preventDefault();
+                window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+              }}
+            >
               AL-HADIQA <span>INVEST</span>
             </a>
             <p className="footer-slogan" style={{ color: 'var(--gold-soft)', fontStyle: 'italic', margin: '0.4rem 0 0.8rem 0', fontSize: '0.92rem' }}>
@@ -70,7 +78,71 @@ export const Footer: React.FC = () => {
           <p className="footer-credit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.6rem' }}>
             <span>Derechos de autor &copy; 2026 <strong>Smith Business Solutions</strong></span>
             <span className="sep" aria-hidden="true">|</span>
-            <span>Diseño y desarrollo</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('al_hadiqa_open_legal', { detail: { tab: 'terms' } }));
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--gold-soft)',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                padding: 0
+              }}
+              title="Consultar Términos y Condiciones de Uso Oficiales"
+            >
+              📜 Términos y Condiciones
+            </button>
+            <span className="sep" aria-hidden="true">|</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('al_hadiqa_open_legal', { detail: { tab: 'privacy' } }));
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#34d399',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                padding: 0
+              }}
+              title="Consultar Política de Privacidad y Tratamiento de Datos (RGPD)"
+            >
+              🛡️ Política de Privacidad
+            </button>
+            <span className="sep" aria-hidden="true">|</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('al_hadiqa_open_legal', { detail: { tab: 'security' } }));
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#60a5fa',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                padding: 0
+              }}
+              title="Auditoría de Seguridad, OWASP y Protección de APIs"
+            >
+              🔒 Seguridad &amp; Secretos
+            </button>
             <span className="sep" aria-hidden="true">|</span>
             <button
               type="button"
@@ -91,7 +163,7 @@ export const Footer: React.FC = () => {
               }}
               title="Administrar preferencias de cookies y privacidad"
             >
-              🍪 Aviso y Configuración de Cookies
+              🍪 Cookies
             </button>
             <span className="sep" aria-hidden="true">|</span>
             <button

@@ -44,4 +44,17 @@ export default defineConfig({
       'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-three': ['three'],
+          'vendor-charts': ['recharts', 'd3'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+        },
+      },
+    },
+  },
 });

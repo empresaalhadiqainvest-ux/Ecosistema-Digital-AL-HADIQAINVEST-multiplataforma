@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   FeedbackCategory,
@@ -11,6 +11,7 @@ import {
   FeedbackReportItem,
 } from '../types/feedback';
 import { submitFeedbackReport, getLocalFeedbackHistory } from '../services/feedbackService';
+import { trackEvent } from '../utils/analytics';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -39,6 +40,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [rating, setRating] = useState<number>(5);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+  const renderTimeRef = useRef<number>(Date.now());
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,17 +68,49 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!title.trim()) {
-      setErrorMessage('Por favor, ingresa un título o resumen para tu reporte.');
+    // 1. Detección honeypot
+    if (honeypot.trim() !== '') {
+      console.warn('Bot de spam interceptado por trampa honeypot.');
+      setSubmitSuccessId('TKT-SPAM-GUARD');
       return;
     }
-    if (!description.trim()) {
-      setErrorMessage('Por favor, detalla tu sugerencia o la corrección que deseas aportar.');
+
+    // 2. Detección de bot por velocidad de envío (< 1.2 segundos)
+    if (Date.now() - renderTimeRef.current < 1200) {
+      setErrorMessage('Envío detectado como automatizado. Por favor, tómate un momento e intenta nuevamente.');
       return;
     }
-    if (!userName.trim()) {
-      setErrorMessage('Por favor, indica tu nombre o seudónimo.');
+
+    // 3. Validaciones de longitud y contenido
+    const cleanTitle = title.trim();
+    const cleanDesc = description.trim();
+    const cleanName = userName.trim();
+    const cleanEmail = userEmail.trim().toLowerCase();
+
+    if (!cleanTitle || cleanTitle.length < 3) {
+      setErrorMessage('Por favor, ingresa un título descriptivo (mínimo 3 caracteres).');
       return;
+    }
+    if (cleanTitle.length > 120) {
+      setErrorMessage('El título no puede exceder 120 caracteres.');
+      return;
+    }
+    if (!cleanDesc || cleanDesc.length < 8) {
+      setErrorMessage('Por favor, detalla tu sugerencia o la corrección que deseas aportar (mínimo 8 caracteres).');
+      return;
+    }
+    if (!cleanName || cleanName.length < 2) {
+      setErrorMessage('Por favor, indica tu nombre o seudónimo de alumno.');
+      return;
+    }
+
+    // Validación de formato de correo si se proporciona
+    if (cleanEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        setErrorMessage('El formato de correo de contacto no es válido.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -83,14 +118,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       const ticketId = await submitFeedbackReport({
         category,
         module,
-        title: title.trim(),
-        description: description.trim(),
+        title: cleanTitle,
+        description: cleanDesc,
         stepsToReproduce: category === 'bug' ? stepsToReproduce.trim() : undefined,
         priority,
         rating: category === 'calificacion' ? rating : undefined,
         userId: currentUser?.uid,
-        userName: userName.trim(),
-        userEmail: userEmail.trim(),
+        userName: cleanName,
+        userEmail: cleanEmail,
         userRole: profile?.role || 'visitante',
       });
 
@@ -100,6 +135,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       setDescription('');
       setStepsToReproduce('');
       setLocalHistory(getLocalFeedbackHistory());
+
+      // Registro analítico GA4 con evento personalizado
+      trackEvent('feedback_submitted', {
+        feedback_category: category,
+        feedback_module: module,
+        has_auth: Boolean(currentUser),
+      });
     } catch (err: any) {
       console.error('Error submitting feedback:', err);
       setErrorMessage(
@@ -227,7 +269,21 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                {/* Honeypot Antispam */}
+                <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, height: 0, width: 0, overflow: 'hidden' }} aria-hidden="true">
+                  <label htmlFor="b_feedback_hp">No llenar:</label>
+                  <input
+                    id="b_feedback_hp"
+                    type="text"
+                    name="b_fax_hp"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
+
                 {errorMessage && (
                   <div className="p-3 rounded-xl bg-red-950/50 border border-red-500/50 text-red-200 text-xs flex items-center gap-2">
                     <span>⚠️</span>

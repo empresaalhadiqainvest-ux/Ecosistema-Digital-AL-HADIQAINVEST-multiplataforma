@@ -373,8 +373,8 @@ export const FloatingAssistantBot: React.FC<FloatingAssistantBotProps> = ({
       <div
         style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
+          bottom: 'clamp(14px, 2.5vh, 24px)',
+          right: 'clamp(12px, 3vw, 24px)',
           zIndex: 550,
           display: 'flex',
           flexDirection: 'column',
@@ -411,8 +411,8 @@ export const FloatingAssistantBot: React.FC<FloatingAssistantBotProps> = ({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           style={{
-            width: '60px',
-            height: '60px',
+            width: '54px',
+            height: '54px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
             border: '2px solid #34d399',
@@ -428,9 +428,9 @@ export const FloatingAssistantBot: React.FC<FloatingAssistantBotProps> = ({
           title="Asistente Integrado para Nuevos Alumnos"
         >
           {isOpen ? (
-            <span style={{ fontSize: '1.6rem', color: '#07111f', fontWeight: 'bold' }}>✕</span>
+            <span style={{ fontSize: '1.4rem', color: '#07111f', fontWeight: 'bold' }}>✕</span>
           ) : (
-            <span style={{ fontSize: '1.75rem' }}>🤖</span>
+            <span style={{ fontSize: '1.6rem' }}>🤖</span>
           )}
 
           {/* Online green indicator badge */}
@@ -439,8 +439,8 @@ export const FloatingAssistantBot: React.FC<FloatingAssistantBotProps> = ({
               position: 'absolute',
               top: '2px',
               right: '2px',
-              width: '14px',
-              height: '14px',
+              width: '13px',
+              height: '13px',
               borderRadius: '50%',
               backgroundColor: '#10b981',
               border: '2px solid #0f172a',
@@ -455,12 +455,12 @@ export const FloatingAssistantBot: React.FC<FloatingAssistantBotProps> = ({
         <div
           style={{
             position: 'fixed',
-            bottom: '96px',
-            right: '24px',
+            bottom: 'clamp(76px, 11vh, 96px)',
+            right: 'clamp(12px, 3vw, 24px)',
             width: '420px',
-            maxWidth: 'calc(100vw - 32px)',
+            maxWidth: 'calc(100vw - 24px)',
             height: '600px',
-            maxHeight: 'calc(100vh - 120px)',
+            maxHeight: 'calc(100dvh - 100px)',
             zIndex: 550,
             background: 'linear-gradient(175deg, #0f172a 0%, #070b14 100%)',
             border: '1px solid rgba(245, 158, 11, 0.35)',

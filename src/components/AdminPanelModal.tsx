@@ -997,7 +997,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             {u.photoURL ? (
-                              <img src={u.photoURL} alt={u.displayName} style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
+                              <img src={u.photoURL} alt={`Fotografía de perfil de ${u.displayName || u.email || 'usuario registrado'}`} style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
                             ) : (
                               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                                 {u.displayName.charAt(0)}

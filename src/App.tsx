@@ -19,16 +19,22 @@ import { CapitalSection } from './components/CapitalSection';
 import { FaqSection } from './components/FaqSection';
 import { NewsletterSection } from './components/NewsletterSection';
 import { Footer } from './components/Footer';
-import { AdminPanelModal } from './components/AdminPanelModal';
-import { StudentPortalModal } from './components/StudentPortalModal';
-import { PartnerApproverModal } from './components/PartnerApproverModal';
 import { FloatingAssistantBot } from './components/FloatingAssistantBot';
-import { SecurityComplianceModal } from './components/SecurityComplianceModal';
-import { OpenSourceTradingMentorModal } from './components/OpenSourceTradingMentorModal';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
-import { SmcCalculatorValidatorModal } from './components/SmcCalculatorValidatorModal';
-import { FeedbackModal } from './components/FeedbackModal';
 import { FeedbackCategory, FeedbackModule } from './types/feedback';
+import type { LegalTab } from './components/LegalTermsPrivacyModal';
+import { NotFoundPage } from './components/NotFoundPage';
+import { trackPageView } from './utils/analytics';
+
+// Modales pesados cargados bajo demanda (Code Splitting / Reducción masiva del bundle inicial)
+const AdminPanelModal = React.lazy(() => import('./components/AdminPanelModal').then(m => ({ default: m.AdminPanelModal })));
+const StudentPortalModal = React.lazy(() => import('./components/StudentPortalModal').then(m => ({ default: m.StudentPortalModal })));
+const PartnerApproverModal = React.lazy(() => import('./components/PartnerApproverModal').then(m => ({ default: m.PartnerApproverModal })));
+const SecurityComplianceModal = React.lazy(() => import('./components/SecurityComplianceModal').then(m => ({ default: m.SecurityComplianceModal })));
+const OpenSourceTradingMentorModal = React.lazy(() => import('./components/OpenSourceTradingMentorModal').then(m => ({ default: m.OpenSourceTradingMentorModal })));
+const SmcCalculatorValidatorModal = React.lazy(() => import('./components/SmcCalculatorValidatorModal').then(m => ({ default: m.SmcCalculatorValidatorModal })));
+const FeedbackModal = React.lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
+const LegalTermsPrivacyModal = React.lazy(() => import('./components/LegalTermsPrivacyModal').then(m => ({ default: m.LegalTermsPrivacyModal })));
 
 export const AppContent: React.FC = () => {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -40,9 +46,39 @@ export const AppContent: React.FC = () => {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [feedbackCategory, setFeedbackCategory] = useState<FeedbackCategory>('sugerencia');
   const [feedbackModule, setFeedbackModule] = useState<FeedbackModule>('calculador_smc');
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab>('terms');
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname;
+    }
+    return '/';
+  });
+
+  const isNotFound = currentPath !== '/' && currentPath !== '' && currentPath !== '/index.html';
+
+  // Escuchar cambios de ruta de navegación en el historial (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Seguimiento analítico GA4 de páginas vistas conforme a consentimiento GDPR/ePrivacy
+  useEffect(() => {
+    trackPageView(
+      currentPath,
+      isNotFound
+        ? 'Error 404 - Página no encontrada | AL-HADIQA INVEST'
+        : 'AL-HADIQA INVEST | Holding Empresarial y Academia de Trading Institucional'
+    );
+  }, [currentPath, isNotFound]);
 
   // Asegura que al cargar la aplicación inmediatamente cargue desde el inicio ("Holding & Academia")
   useEffect(() => {
+    if (isNotFound) return;
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
@@ -55,7 +91,7 @@ export const AppContent: React.FC = () => {
     }, 50);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isNotFound]);
 
   // Escuchar evento global para abrir la suite de cálculo y validación SMC
   useEffect(() => {
@@ -78,6 +114,53 @@ export const AppContent: React.FC = () => {
     window.addEventListener('al_hadiqa_open_feedback', handleOpenFeedback);
     return () => window.removeEventListener('al_hadiqa_open_feedback', handleOpenFeedback);
   }, []);
+
+  // Escuchar evento global para abrir Términos, Política de Privacidad y Auditoría de Secretos
+  useEffect(() => {
+    const handleOpenLegal = (e: any) => {
+      if (e?.detail?.tab) {
+        setLegalModalTab(e.detail.tab);
+      }
+      setIsLegalModalOpen(true);
+    };
+
+    window.addEventListener('al_hadiqa_open_legal', handleOpenLegal);
+    return () => window.removeEventListener('al_hadiqa_open_legal', handleOpenLegal);
+  }, []);
+
+  if (isNotFound) {
+    return (
+      <>
+        <NotFoundPage
+          onGoHome={() => {
+            if (typeof window !== 'undefined') {
+              window.history.pushState({}, '', '/');
+              setCurrentPath('/');
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+            }
+          }}
+        />
+        <React.Suspense fallback={null}>
+          {isFeedbackOpen && (
+            <FeedbackModal
+              isOpen={isFeedbackOpen}
+              onClose={() => setIsFeedbackOpen(false)}
+              defaultCategory={feedbackCategory}
+              defaultModule={feedbackModule}
+            />
+          )}
+          {isLegalModalOpen && (
+            <LegalTermsPrivacyModal
+              isOpen={isLegalModalOpen}
+              onClose={() => setIsLegalModalOpen(false)}
+              initialTab={legalModalTab}
+            />
+          )}
+        </React.Suspense>
+        <CookieConsentBanner />
+      </>
+    );
+  }
 
   return (
     <>
@@ -120,17 +203,44 @@ export const AppContent: React.FC = () => {
 
       <Footer />
 
-      {/* Modales Principales: Panel Maestro (Sr.smith), Portal del Alumno, Panel de Aprobador Socio & Centro de Seguridad */}
-      <AdminPanelModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
-      <StudentPortalModal isOpen={isStudentPortalOpen} onClose={() => setIsStudentPortalOpen(false)} />
-      <PartnerApproverModal isOpen={isApproverOpen} onClose={() => setIsApproverOpen(false)} />
-      <SecurityComplianceModal isOpen={isSecurityOpen} onClose={() => setIsSecurityOpen(false)} />
-
-      {/* Mentor de Trading Gratuito de Código Abierto (SMC, Lotaje, Validador y Voz Nativa) */}
-      <OpenSourceTradingMentorModal
-        isOpen={isMentorOpen}
-        onClose={() => setIsMentorOpen(false)}
-      />
+      {/* Modales cargados bajo demanda con Suspense para máxima velocidad de carga */}
+      <React.Suspense fallback={null}>
+        {isAdminOpen && <AdminPanelModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />}
+        {isStudentPortalOpen && <StudentPortalModal isOpen={isStudentPortalOpen} onClose={() => setIsStudentPortalOpen(false)} />}
+        {isApproverOpen && <PartnerApproverModal isOpen={isApproverOpen} onClose={() => setIsApproverOpen(false)} />}
+        {isSecurityOpen && <SecurityComplianceModal isOpen={isSecurityOpen} onClose={() => setIsSecurityOpen(false)} />}
+        {isMentorOpen && (
+          <OpenSourceTradingMentorModal
+            isOpen={isMentorOpen}
+            onClose={() => setIsMentorOpen(false)}
+          />
+        )}
+        {isSmcSuiteOpen && (
+          <SmcCalculatorValidatorModal
+            isOpen={isSmcSuiteOpen}
+            onClose={() => setIsSmcSuiteOpen(false)}
+            onConsultMentor={(_prompt) => {
+              setIsSmcSuiteOpen(false);
+              setIsMentorOpen(true);
+            }}
+          />
+        )}
+        {isFeedbackOpen && (
+          <FeedbackModal
+            isOpen={isFeedbackOpen}
+            onClose={() => setIsFeedbackOpen(false)}
+            defaultCategory={feedbackCategory}
+            defaultModule={feedbackModule}
+          />
+        )}
+        {isLegalModalOpen && (
+          <LegalTermsPrivacyModal
+            isOpen={isLegalModalOpen}
+            onClose={() => setIsLegalModalOpen(false)}
+            initialTab={legalModalTab}
+          />
+        )}
+      </React.Suspense>
 
       {/* Bot Asistente Flotante Integrado (Guía para Nuevos Usuarios, Clases, Chat, Biblioteca, Permisos y Mentor) */}
       <FloatingAssistantBot
@@ -139,29 +249,11 @@ export const AppContent: React.FC = () => {
         onOpenLiveVoice={() => setIsMentorOpen(true)}
       />
 
-      {/* Suite Matemática y Auditoría Algorítmica SMC (100% Funcional y No Simulado) */}
-      <SmcCalculatorValidatorModal
-        isOpen={isSmcSuiteOpen}
-        onClose={() => setIsSmcSuiteOpen(false)}
-        onConsultMentor={(_prompt) => {
-          setIsSmcSuiteOpen(false);
-          setIsMentorOpen(true);
-        }}
-      />
-
-      {/* Centro Integral de Feedback, Sugerencias y Correcciones */}
-      <FeedbackModal
-        isOpen={isFeedbackOpen}
-        onClose={() => setIsFeedbackOpen(false)}
-        defaultCategory={feedbackCategory}
-        defaultModule={feedbackModule}
-      />
-
       {/* Botón flotante discreto de Feedback y Correcciones */}
       <button
         type="button"
         onClick={() => setIsFeedbackOpen(true)}
-        className="fixed bottom-4 left-4 z-40 px-3.5 py-2 rounded-full bg-[#03140e]/95 hover:bg-[#062319] border border-amber-500/40 hover:border-amber-400 text-amber-200 text-xs font-bold shadow-[0_10px_25px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95 group"
+        className="fixed bottom-3.5 left-3 sm:bottom-4 sm:left-4 z-40 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-[#03140e]/95 hover:bg-[#062319] border border-amber-500/40 hover:border-amber-400 text-amber-200 text-[11px] sm:text-xs font-bold shadow-[0_10px_25px_rgba(0,0,0,0.85)] backdrop-blur-md transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer hover:scale-105 active:scale-95 group"
         title="Enviar Feedback, Sugerencias o Correcciones de la plataforma"
       >
         <span className="text-sm">📨</span>

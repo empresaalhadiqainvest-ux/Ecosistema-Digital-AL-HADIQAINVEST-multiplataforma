@@ -36,13 +36,19 @@ export const FounderBiographySection: React.FC<FounderBiographyProps> = ({ onOpe
           <div className="founder-portrait-card">
             <div className="portrait-frame">
               {!imageError ? (
-                <img
-                  src={portraitSrc}
-                  alt="Carlos Smith Zambrano González - CEO y Presidente de AL-HADIQA INVEST"
-                  className="portrait-image"
-                  loading="lazy"
-                  onError={() => setImageError(true)}
-                />
+                <picture>
+                  <source srcSet="/assets/aistudio/Gemini_Generated_Image_yszfflyszfflyszf_0d40df6e.webp" type="image/webp" />
+                  <img
+                    src={portraitSrc}
+                    width={896}
+                    height={1170}
+                    decoding="async"
+                    alt="Carlos Smith Zambrano González - CEO y Presidente de AL-HADIQA INVEST"
+                    className="portrait-image"
+                    loading="lazy"
+                    onError={() => setImageError(true)}
+                  />
+                </picture>
               ) : (
                 /* Placeholder Ilustrado Presidencial en caso de error de carga */
                 <div className="portrait-placeholder">

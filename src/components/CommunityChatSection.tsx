@@ -274,7 +274,7 @@ export const CommunityChatSection: React.FC = () => {
                     {msg.authorPhoto ? (
                       <img
                         src={msg.authorPhoto}
-                        alt={msg.authorName}
+                        alt={`Avatar de usuario de ${msg.authorName || 'miembro de la comunidad'}`}
                         style={{ width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0 }}
                       />
                     ) : (

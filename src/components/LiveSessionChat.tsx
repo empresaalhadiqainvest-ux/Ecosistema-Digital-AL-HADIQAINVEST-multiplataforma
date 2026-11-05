@@ -324,7 +324,7 @@ export const LiveSessionChat: React.FC<LiveSessionChatProps> = ({
                     {m.authorPhoto ? (
                       <img
                         src={m.authorPhoto}
-                        alt={m.authorName}
+                        alt={`Avatar de ${m.authorName || 'alumno en sesión en vivo'}`}
                         style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
                       />
                     ) : (

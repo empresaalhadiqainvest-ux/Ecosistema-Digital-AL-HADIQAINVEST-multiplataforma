@@ -61,7 +61,7 @@ export function buildWelcomeEmailHtml(toName: string, toEmail: string): string {
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 35px 0 20px;">
-                <a href="#portal" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #07111f; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#roadmap" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #07111f; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
                   Ingresar a Mi Portal de Alumno &rarr;
                 </a>
               </div>
@@ -78,8 +78,8 @@ export function buildWelcomeEmailHtml(toName: string, toEmail: string): string {
                 Remitente: ${SENDER_NAME} &lt;${SENDER_EMAIL}&gt;
               </p>
               <p style="margin: 0;">
-                <a href="#preferencias" style="color: #94a3b8; text-decoration: underline;">Modificar preferencias de correo</a> · 
-                <a href="#unsubscribe" style="color: #ef4444; text-decoration: underline;">Darse de baja (Unsubscribe)</a>
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#faq" style="color: #94a3b8; text-decoration: underline;">Centro de Ayuda &amp; Preferencias</a> · 
+                <a href="mailto:empresaalhadiqainvest@gmail.com?subject=Solicitud%20de%20Baja%20de%20Comunicaciones%20AL-HADIQA" style="color: #ef4444; text-decoration: underline;">Darse de baja (Unsubscribe)</a>
               </p>
             </td>
           </tr>
@@ -152,7 +152,7 @@ export function buildLiveClassEmailHtml(params: {
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0 20px;">
-                <a href="#clases-en-vivo" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);">
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#clases-en-vivo" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);">
                   Entrar a la Sala Virtual Ahora &rarr;
                 </a>
               </div>
@@ -166,8 +166,8 @@ export function buildLiveClassEmailHtml(params: {
                 Aviso Legal JustMarkets: Contenido estrictamente educativo. No constituye recomendación financiera.
               </p>
               <p style="margin: 0;">
-                <a href="#preferencias" style="color: #94a3b8;">Modificar alertas de clases</a> · 
-                <a href="#unsubscribe" style="color: #ef4444;">Darse de baja</a>
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#faq" style="color: #94a3b8;">Centro de Ayuda &amp; Preferencias</a> · 
+                <a href="mailto:empresaalhadiqainvest@gmail.com?subject=Solicitud%20de%20Baja%20de%20Comunicaciones%20AL-HADIQA" style="color: #ef4444;">Darse de baja</a>
               </p>
             </td>
           </tr>
@@ -240,7 +240,7 @@ export function buildNewContentEmailHtml(params: {
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0 20px;">
-                <a href="#biblioteca" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #07111f; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block;">
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#biblioteca" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #07111f; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block;">
                   Acceder al Contenido &rarr;
                 </a>
               </div>
@@ -252,8 +252,8 @@ export function buildNewContentEmailHtml(params: {
             <td style="padding: 20px 40px; background-color: #070b14; border-top: 1px solid rgba(148, 163, 184, 0.1); font-size: 12px; color: #64748b; text-align: center;">
               <p style="margin: 0 0 6px;">Aviso Legal JustMarkets: Contenido estrictamente formativo.</p>
               <p style="margin: 0;">
-                <a href="#preferencias" style="color: #94a3b8;">Preferencias de notificación</a> · 
-                <a href="#unsubscribe" style="color: #ef4444;">Darse de baja</a>
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#faq" style="color: #94a3b8;">Centro de Ayuda &amp; Preferencias</a> · 
+                <a href="mailto:empresaalhadiqainvest@gmail.com?subject=Solicitud%20de%20Baja%20de%20Comunicaciones%20AL-HADIQA" style="color: #ef4444;">Darse de baja</a>
               </p>
             </td>
           </tr>
@@ -340,7 +340,7 @@ export function buildPermissionChangeEmailHtml(params: {
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0 20px;">
-                <a href="#portal" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block;">
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#roadmap" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 14px 32px; border-radius: 8px; display: inline-block;">
                   Ver Mi Perfil Actualizado &rarr;
                 </a>
               </div>
@@ -352,8 +352,8 @@ export function buildPermissionChangeEmailHtml(params: {
             <td style="padding: 20px 40px; background-color: #070b14; border-top: 1px solid rgba(148, 163, 184, 0.1); font-size: 12px; color: #64748b; text-align: center;">
               <p style="margin: 0 0 6px;">Aviso Legal JustMarkets: Contenido educativo y formativo.</p>
               <p style="margin: 0;">
-                <a href="#preferencias" style="color: #94a3b8;">Preferencias de notificación</a> · 
-                <a href="#unsubscribe" style="color: #ef4444;">Darse de baja</a>
+                <a href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#faq" style="color: #94a3b8;">Centro de Ayuda &amp; Preferencias</a> · 
+                <a href="mailto:empresaalhadiqainvest@gmail.com?subject=Solicitud%20de%20Baja%20de%20Comunicaciones%20AL-HADIQA" style="color: #ef4444;">Darse de baja</a>
               </p>
             </td>
           </tr>

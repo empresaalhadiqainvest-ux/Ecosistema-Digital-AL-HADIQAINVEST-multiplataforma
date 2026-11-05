@@ -305,7 +305,7 @@ export const StudentPortalModal: React.FC<StudentPortalModalProps> = ({ isOpen, 
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
             {profile?.photoURL ? (
-              <img src={profile.photoURL} alt={profile.displayName} style={{ width: '42px', height: '42px', borderRadius: '50%' }} />
+              <img src={profile.photoURL} alt={`Fotografía de perfil de ${profile.displayName || 'alumno de la academia'}`} style={{ width: '42px', height: '42px', borderRadius: '50%' }} />
             ) : (
               <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'var(--emerald)', color: '#07111f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                 {profile?.displayName?.charAt(0) || 'A'}

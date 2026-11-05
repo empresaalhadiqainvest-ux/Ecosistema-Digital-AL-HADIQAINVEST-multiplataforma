@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  
+  <!-- Página de Inicio Principal: Holding & Academia -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Biografía Oficial del Fundador Carlos Smith Zambrano González -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#fundador</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Trading Institucional & Metodología Smart Money Concepts (SMC) -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#trading</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Roadmap del Alumno y Plan de Carrera de Trading -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#roadmap</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Bróker Oficial Auditado (JustMarkets con 5 Auditorías Públicas) -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#broker</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Streaming Oficial y Sesiones en Directo en YouTube -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#streaming</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+  </url>
+
+  <!-- Cartelera y Horarios de Clases en Vivo -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#clases-en-vivo</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Biblioteca Exclusiva de Libros y Manuales con Tokens Firmados -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#biblioteca</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Comunidad y Salas de Chat Temáticas -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#comunidad-chat</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Noticias Económicas y Análisis Fundamental de Mercado -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#noticias-mercado</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- AL-HADIQA Capital: Educación Financiera y Cuadrante del Flujo -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#capital</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Smith Business Solutions: Soluciones Tecnológicas y Software -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#smithbusiness</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- Taberna Lions-Gold: Comunidad Gaming y Torneos -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#gaming</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Ecosistema Digital Holding: Pilares Corporativos -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#ecosistema</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+
+  <!-- Preguntas Frecuentes (FAQ) y Centro de Ayuda -->
+  <url>
+    <loc>https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/#faq</loc>
+    <lastmod>2026-11-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
