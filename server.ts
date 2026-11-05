@@ -27,6 +27,11 @@ app.use(compression({
   },
 }));
 
+// Habilitar CORS y parser de cuerpos JSON y URL-encoded para APIs POST/PUT
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Middleware para forzar HTTPS y aplicar cabeceras estrictas de seguridad (OWASP & HSTS)
 app.use((req, res, next) => {
   // Forzar protocolo HTTPS mediante HSTS (Strict-Transport-Security)
@@ -473,17 +478,6 @@ Reglas clave:
 - Responde en español con tono profesional, institucional, motivador y claro.
 - Aclara siempre que la educación y el trading conllevan riesgo y no brindas asesoría financiera personalizada garantizada, sino educación técnica y estratégica de élite.
 - Puedes formatear tus respuestas usando Markdown limpio (títulos, listas, fórmulas o negritas).`;
-
-// Health check endpoint
-app.get('/api/health', (_req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const isKeyPresent = Boolean(apiKey && apiKey.trim() !== '' && !apiKey.includes('YOUR_GEMINI_API_KEY'));
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    geminiKeyConfigured: isKeyPresent,
-  });
-});
 
 // Open-Source Institutional Trading Mentor Chat endpoint
 const handleMentorChatStream = async (req: express.Request, res: express.Response) => {
