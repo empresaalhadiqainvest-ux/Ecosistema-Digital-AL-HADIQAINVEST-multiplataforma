@@ -24,7 +24,7 @@ export const SmithBusinessSection: React.FC = () => {
           <div>
             <a
               className="btn btn--blue"
-              href="https://empresaalhadiqainvest-ux.github.io/Smith-business-solutions/"
+              href="https://empresaalhadiqainvest-ux.github.io/smith-bussines-solutios/"
               target="_blank"
               rel="noopener noreferrer"
             >

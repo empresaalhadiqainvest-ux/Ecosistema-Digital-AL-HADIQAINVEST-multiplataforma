@@ -22,7 +22,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, 
   };
 
   return (
-    <section className="hero" id="inicio">
+    <section className="hero" id="inicio" data-section="investor-academy">
       {/* Fondos y resplandores dorados acordes al mármol negro y oro de la portada */}
       <div className="grid-bg" aria-hidden="true"></div>
       <div className="glow glow--gold" aria-hidden="true"></div>
@@ -38,7 +38,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, 
               <span>HOLDING &amp; ACADEMIA FINANCIERA · DESDE 2026</span>
             </div>
 
-            <h1 className="h-display hero-title">
+            <h1 id="investor-academy" className="h-display hero-title">
               Investor Academy <span className="gradient-text">Al-hadida Invest</span>
             </h1>
 

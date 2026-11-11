@@ -56,7 +56,7 @@ export const Footer: React.FC = () => {
                 Plataforma de Trading
               </a>
               <a
-                href="https://empresaalhadiqainvest-ux.github.io/Smith-business-solutions/"
+                href="https://empresaalhadiqainvest-ux.github.io/smith-bussines-solutios/"
                 target="_blank"
                 rel="noopener noreferrer"
               >

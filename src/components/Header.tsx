@@ -75,6 +75,8 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={(e) => {
               e.preventDefault();
               window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+              const hero = document.getElementById('inicio');
+              if (hero) hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
               closeMenu();
             }}
           >

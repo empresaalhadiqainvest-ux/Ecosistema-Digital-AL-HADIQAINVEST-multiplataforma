@@ -76,21 +76,54 @@ export const AppContent: React.FC = () => {
     );
   }, [currentPath, isNotFound]);
 
-  // Asegura que al cargar la aplicación inmediatamente cargue desde el inicio ("Holding & Academia")
+  // Asegura que al ingresar o recargar la página, SIEMPRE cargue y se posicione exactamente
+  // en la cabecera: "Investor Academy Al-hadida Invest · «Cultivando el crecimiento, nutriendo su capital»"
   useEffect(() => {
     if (isNotFound) return;
+
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
-    // Scroll instantáneo al tope (0, 0)
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
 
-    // Refuerzo para asegurar el inicio tras pintar componentes pesados
-    const timer = setTimeout(() => {
+    const scrollToInvestorAcademy = () => {
+      // Forzar temporalmente scroll instantáneo desactivando smooth scroll
+      document.documentElement.style.scrollBehavior = 'auto';
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
-    }, 50);
+      const hero = document.getElementById('inicio') || document.getElementById('investor-academy');
+      if (hero) {
+        hero.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'start' });
+      }
+    };
 
-    return () => clearTimeout(timer);
+    // 1. Ejecución instantánea en el primer ciclo
+    scrollToInvestorAcademy();
+
+    // 2. Refuerzo escalonado para neutralizar repintados tras carga de fuentes/imágenes
+    const timer1 = setTimeout(scrollToInvestorAcademy, 25);
+    const timer2 = setTimeout(scrollToInvestorAcademy, 100);
+    const timer3 = setTimeout(scrollToInvestorAcademy, 250);
+    const timer4 = setTimeout(() => {
+      scrollToInvestorAcademy();
+      // Restaurar el comportamiento de scroll suave para clics en enlaces internos
+      document.documentElement.style.scrollBehavior = '';
+    }, 500);
+
+    // 3. Cuando finalice la carga completa de recursos (imágenes de portada y tipografías)
+    const handleWindowLoad = () => scrollToInvestorAcademy();
+    window.addEventListener('load', handleWindowLoad, { once: true });
+
+    // 4. Si el navegador restaura la sesión desde memoria o historial (pageshow / bfcache)
+    const handlePageShow = () => scrollToInvestorAcademy();
+    window.addEventListener('pageshow', handlePageShow);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
+      window.removeEventListener('load', handleWindowLoad);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, [isNotFound]);
 
   // Escuchar evento global para abrir la suite de cálculo y validación SMC
