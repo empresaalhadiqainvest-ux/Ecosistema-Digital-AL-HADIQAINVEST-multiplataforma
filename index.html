@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
   <!-- Carga garantizada desde el encabezado oficial: Investor Academy Al-hadida Invest -->
   <script>
@@ -26,11 +26,20 @@
   <meta name="keywords" content="AL-HADIQA INVEST, trading institucional, Smart Money Concepts, SMC, Carlos Smith Zambrano González, Smith Business Solutions, educación financiera, Kiyosaki, Forex, JustMarkets, Taberna Lions-Gold">
   <meta name="author" content="Carlos Smith Zambrano González - Smith Business Solutions">
   <meta name="theme-color" content="#062319">
+  <meta name="color-scheme" content="dark">
 
-  <!-- Favicon e Iconos Multiplataforma -->
+  <!-- Meta Tags PWA Multiplataforma (Android, iPhone, iPad y macOS Safari) -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Al-Hadiqa">
+  <meta name="application-name" content="Al-Hadiqa">
+
+  <!-- Favicon e Iconos Multiplataforma PNG/SVG -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
   <!-- URL Canónica Oficial -->
   <link rel="canonical" href="https://ais-pre-edhvj2r6aca7vjztc46cco-860728404276.us-east1.run.app/">
@@ -61,10 +70,25 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(self), geolocation=()">
 
-  <!-- Fuentes Tipográficas Preconectadas -->
+  <!-- Preconexión y DNS-Prefetch para acelerar carga de recursos externos y Firebase -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+  <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+  <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com">
+  <link rel="dns-prefetch" href="https://www.youtube-nocookie.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Montserrat:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preload" as="image" href="/assets/aistudio/presentacion_de_alhadiqa_721bb0bc.webp" type="image/webp" fetchpriority="high">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Montserrat:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+    media="print"
+    onload="this.media='all'"
+  >
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Montserrat:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  </noscript>
 
   <!-- Schema.org Datos Estructurados (JSON-LD) para Buscadores y Entidades -->
   <script type="application/ld+json">

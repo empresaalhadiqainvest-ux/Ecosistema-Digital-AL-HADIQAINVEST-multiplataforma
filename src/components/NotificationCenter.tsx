@@ -5,6 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { AppNotificationItem, EmailLogItem } from '../types/notifications';
 import { EmailViewerModal } from './EmailViewerModal';
 import { NotificationPreferencesModal } from './NotificationPreferencesModal';
+import { DailyPersonalDevMessage } from '../data/dailyPersonalDevMessages';
+import {
+  deliverDailyPersonalDevNotification,
+  getTodayPersonalDevMessage,
+  isAppInstalledOrStandalone,
+  isDailyPersonalDevEnabled,
+} from '../services/dailyPersonalDevService';
 
 export const NotificationCenter: React.FC = () => {
   const { currentUser } = useAuth();
@@ -64,6 +71,82 @@ export const NotificationCenter: React.FC = () => {
     );
 
     return () => unsub();
+  }, []);
+
+  // Escuchar alertas instantáneas de transmisión (TikTok @alhadiqa.capital / YouTube) en la sesión actual
+  useEffect(() => {
+    const handleLiveChannelAlert = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        id: string;
+        platform: 'tiktok' | 'youtube';
+        title: string;
+        message: string;
+        url: string;
+        detectedAt: string;
+      }>).detail;
+      if (!detail?.id) return;
+
+      setNotifications((prev) => {
+        if (prev.some((item) => item.id === detail.id)) return prev;
+        const injected: AppNotificationItem = {
+          id: detail.id,
+          title: detail.title,
+          message: detail.message,
+          category: 'clase',
+          targetRole: 'all',
+          type: 'class',
+          actionUrl: detail.url,
+          actionLabel: detail.platform === 'tiktok' ? 'Ver en TikTok ↗' : 'Ir a Streaming',
+          createdAt: detail.detectedAt || new Date().toISOString(),
+        };
+        return [injected, ...prev].slice(0, 30);
+      });
+    };
+
+    window.addEventListener('al_hadiqa_channel_alert', handleLiveChannelAlert);
+    return () => window.removeEventListener('al_hadiqa_channel_alert', handleLiveChannelAlert);
+  }, []);
+
+  // Escuchar e incluir notificaciones diarias de desarrollo personal (Brian Tracy y mentores)
+  useEffect(() => {
+    const injectDailyDevItem = (msg: DailyPersonalDevMessage, dateKey?: string) => {
+      const notifId = `daily-dev-${msg.id}-${dateKey || new Date().toISOString().slice(0, 10)}`;
+      const injected: AppNotificationItem = {
+        id: notifId,
+        title: `✨ ${msg.title} (${msg.pillar})`,
+        message: `${msg.message} — Reto: ${msg.dailyAction} [${msg.mentor}]`,
+        category: 'contenido',
+        targetRole: 'all',
+        type: 'info',
+        actionUrl: '#dashboard-estudiantes',
+        actionLabel: 'Ver en Dashboard →',
+        createdAt: new Date().toISOString(),
+      };
+
+      setNotifications((prev) => {
+        if (prev.some((item) => item.id === notifId)) return prev;
+        return [injected, ...prev].slice(0, 30);
+      });
+    };
+
+    if (isAppInstalledOrStandalone() && isDailyPersonalDevEnabled()) {
+      injectDailyDevItem(getTodayPersonalDevMessage());
+    }
+
+    const handleDailyDevEvent = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          message: DailyPersonalDevMessage;
+          dateKey?: string;
+        }>
+      ).detail;
+      if (detail?.message) {
+        injectDailyDevItem(detail.message, detail.dateKey);
+      }
+    };
+
+    window.addEventListener('al_hadiqa_daily_dev_notification', handleDailyDevEvent);
+    return () => window.removeEventListener('al_hadiqa_daily_dev_notification', handleDailyDevEvent);
   }, []);
 
   // Listen to transactional email logs for this user
@@ -379,6 +462,35 @@ export const NotificationCenter: React.FC = () => {
                       <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.4 }}>
                         {item.message}
                       </p>
+                      {(item.actionUrl || (item as AppNotificationItem & { link?: string }).link) && (
+                        <a
+                          href={item.actionUrl || (item as AppNotificationItem & { link?: string }).link}
+                          target={
+                            (item.actionUrl || (item as AppNotificationItem & { link?: string }).link || '').startsWith('http')
+                              ? '_blank'
+                              : undefined
+                          }
+                          rel={
+                            (item.actionUrl || (item as AppNotificationItem & { link?: string }).link || '').startsWith('http')
+                              ? 'noopener noreferrer'
+                              : undefined
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(item.id);
+                          }}
+                          style={{
+                            marginTop: '0.25rem',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            color: '#6ee7b7',
+                            textDecoration: 'underline',
+                            alignSelf: 'flex-start',
+                          }}
+                        >
+                          {item.actionLabel || 'Abrir transmisión ↗'}
+                        </a>
+                      )}
                     </div>
                   );
                 })
@@ -451,9 +563,27 @@ export const NotificationCenter: React.FC = () => {
               ⚙️ Preferencias &amp; Darse de Baja
             </button>
 
-            <span style={{ fontSize: '0.72rem', color: 'var(--muted-2)' }}>
-              Al-Hadiqa Live System
-            </span>
+            <button
+              type="button"
+              onClick={() => {
+                void deliverDailyPersonalDevNotification({
+                  force: true,
+                  rotate: true,
+                  showToast: true,
+                });
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#fde68a',
+                fontSize: '0.73rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+              title="Recibir otra dosis diaria de Brian Tracy y desarrollo personal"
+            >
+              ✨ Nueva Dosis Diaria
+            </button>
           </div>
         </div>
       )}

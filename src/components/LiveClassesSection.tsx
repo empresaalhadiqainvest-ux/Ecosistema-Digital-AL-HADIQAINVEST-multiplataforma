@@ -3,6 +3,8 @@ import { collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { parseStreamEmbedUrl } from '../utils/streamUrlParser';
+import { verifyStreamUrlIntegrity } from '../services/streamCryptoService';
+import { socService } from '../services/socService';
 import { WebRTCBroadcastStudio } from './WebRTCBroadcastStudio';
 import { LiveSessionChat } from './LiveSessionChat';
 
@@ -146,6 +148,25 @@ export const LiveClassesSection: React.FC = () => {
     e.preventDefault();
     if (!newTitle.trim() || !newDesc.trim()) return;
 
+    const textThreat = socService.inspectPayload(`${newTitle} ${newDesc}`);
+    if (textThreat.isThreat && textThreat.vector) {
+      socService.detectAndMitigate({
+        attackVector: textThreat.vector,
+        severity: 'HIGH',
+        targetEndpoint: '/live-classes/create',
+        payloadSample: textThreat.sample || newTitle.slice(0, 100),
+        details: 'Payload sospechoso bloqueado al programar clase en vivo.',
+      });
+      showMsg('🛡️ Contenido bloqueado por el blindaje de seguridad SOC EXCAISRES.');
+      return;
+    }
+
+    const urlValidation = verifyStreamUrlIntegrity(newStreamUrl.trim());
+    if (!urlValidation.valid) {
+      showMsg(`🛡️ Enlace de transmisión bloqueado: ${urlValidation.reason}`);
+      return;
+    }
+
     try {
       const classRef = doc(collection(db, 'classes'));
       const newClassData: Omit<LiveClassItem, 'id'> = {
@@ -154,7 +175,7 @@ export const LiveClassesSection: React.FC = () => {
         instructor: profile?.displayName || 'Sr.smith (Carlos Smith Zambrano)',
         category: newCategory,
         scheduledAt: newDate,
-        streamUrl: newStreamUrl.trim(),
+        streamUrl: urlValidation.sanitizedUrl,
         status: 'pendiente_aprobacion', // Follows required workflow
         createdBy: currentUser?.uid || 'admin',
       };
@@ -1003,6 +1024,8 @@ export const LiveClassesSection: React.FC = () => {
                           <iframe
                             src={embedUrl}
                             title={activeClass.title}
+                            loading="lazy"
+                            referrerPolicy="strict-origin-when-cross-origin"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
                             style={{

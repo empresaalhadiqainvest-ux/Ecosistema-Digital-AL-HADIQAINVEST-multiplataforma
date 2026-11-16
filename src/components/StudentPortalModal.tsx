@@ -329,26 +329,49 @@ export const StudentPortalModal: React.FC<StudentPortalModalProps> = ({ isOpen, 
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'rgba(148, 163, 184, 0.1)',
-              border: '1px solid var(--line)',
-              color: 'var(--text)',
-              borderRadius: '50%',
-              width: '36px',
-              height: '36px',
-              fontSize: '1.1rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-label="Cerrar aula"
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                const el = document.getElementById('dashboard-estudiantes');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              style={{
+                background: 'rgba(212, 175, 55, 0.14)',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                color: '#fde68a',
+                borderRadius: '10px',
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              📊 Ver Dashboard Completo
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'rgba(148, 163, 184, 0.1)',
+                border: '1px solid var(--line)',
+                color: 'var(--text)',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                fontSize: '1.1rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              aria-label="Cerrar aula"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Tab Switcher */}

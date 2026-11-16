@@ -12,6 +12,8 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
 
 // Configuración opcional del proveedor de Google
 googleProvider.setCustomParameters({
@@ -112,9 +114,13 @@ export async function loginWithGoogle() {
   try {
     return await signInWithPopup(auth, googleProvider);
   } catch (error: unknown) {
+    const rawErr = error as { code?: string; customData?: { email?: string } };
     const readable = getReadableAuthErrorMessage(error);
     console.warn('Al-Hadiqa Invest - Google Login warning:', readable, error);
-    throw new Error(readable);
+    const enrichedError = new Error(readable) as Error & { code?: string; email?: string };
+    enrichedError.code = rawErr?.code || 'auth/unknown';
+    enrichedError.email = rawErr?.customData?.email;
+    throw enrichedError;
   }
 }
 

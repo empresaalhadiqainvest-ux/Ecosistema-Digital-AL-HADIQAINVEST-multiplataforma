@@ -1,30 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
-import { Background3D } from './components/Background3D';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Roadmap } from './components/Roadmap';
-import { FounderBiographySection } from './components/FounderBiographySection';
-import { TradingSection } from './components/TradingSection';
-import { TradingPlatformClone } from './components/TradingPlatformClone';
-import { StreamingHubSection } from './components/StreamingHubSection';
-import { LiveClassesSection } from './components/LiveClassesSection';
-import { LibrarySection } from './components/LibrarySection';
-import { CommunityChatSection } from './components/CommunityChatSection';
-import { MarketNewsSection } from './components/MarketNewsSection';
-import { SmithBusinessSection } from './components/SmithBusinessSection';
-import { GamingSection } from './components/GamingSection';
-import { EcosystemSection } from './components/EcosystemSection';
-import { CapitalSection } from './components/CapitalSection';
-import { FaqSection } from './components/FaqSection';
-import { NewsletterSection } from './components/NewsletterSection';
-import { Footer } from './components/Footer';
-import { FloatingAssistantBot } from './components/FloatingAssistantBot';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { FeedbackCategory, FeedbackModule } from './types/feedback';
 import type { LegalTab } from './components/LegalTermsPrivacyModal';
 import { NotFoundPage } from './components/NotFoundPage';
+import { OfflineIndicator } from './components/OfflineIndicator';
+import { LiveStreamMonitorBanner } from './components/LiveStreamMonitorBanner';
+import { DailyPersonalDevManager } from './components/DailyPersonalDevManager';
 import { trackPageView } from './utils/analytics';
+
+// Fondo 3D (Three.js) y secciones por debajo del pliegue cargados mediante Code Splitting
+const Background3D = React.lazy(() => import('./components/Background3D').then(m => ({ default: m.Background3D })));
+const StudentDashboardSection = React.lazy(() => import('./components/StudentDashboardSection').then(m => ({ default: m.StudentDashboardSection })));
+const FounderBiographySection = React.lazy(() => import('./components/FounderBiographySection').then(m => ({ default: m.FounderBiographySection })));
+const TradingSection = React.lazy(() => import('./components/TradingSection').then(m => ({ default: m.TradingSection })));
+const TradingPlatformClone = React.lazy(() => import('./components/TradingPlatformClone').then(m => ({ default: m.TradingPlatformClone })));
+const StreamingHubSection = React.lazy(() => import('./components/StreamingHubSection').then(m => ({ default: m.StreamingHubSection })));
+const LiveClassesSection = React.lazy(() => import('./components/LiveClassesSection').then(m => ({ default: m.LiveClassesSection })));
+const LibrarySection = React.lazy(() => import('./components/LibrarySection').then(m => ({ default: m.LibrarySection })));
+const CommunityChatSection = React.lazy(() => import('./components/CommunityChatSection').then(m => ({ default: m.CommunityChatSection })));
+const MarketNewsSection = React.lazy(() => import('./components/MarketNewsSection').then(m => ({ default: m.MarketNewsSection })));
+const SmithBusinessSection = React.lazy(() => import('./components/SmithBusinessSection').then(m => ({ default: m.SmithBusinessSection })));
+const GamingSection = React.lazy(() => import('./components/GamingSection').then(m => ({ default: m.GamingSection })));
+const EcosystemSection = React.lazy(() => import('./components/EcosystemSection').then(m => ({ default: m.EcosystemSection })));
+const CapitalSection = React.lazy(() => import('./components/CapitalSection').then(m => ({ default: m.CapitalSection })));
+const FaqSection = React.lazy(() => import('./components/FaqSection').then(m => ({ default: m.FaqSection })));
+const NewsletterSection = React.lazy(() => import('./components/NewsletterSection').then(m => ({ default: m.NewsletterSection })));
+const Footer = React.lazy(() => import('./components/Footer').then(m => ({ default: m.Footer })));
+const FloatingAssistantBot = React.lazy(() => import('./components/FloatingAssistantBot').then(m => ({ default: m.FloatingAssistantBot })));
 
 // Modales pesados cargados bajo demanda (Code Splitting / Reducción masiva del bundle inicial)
 const AdminPanelModal = React.lazy(() => import('./components/AdminPanelModal').then(m => ({ default: m.AdminPanelModal })));
@@ -35,12 +41,14 @@ const OpenSourceTradingMentorModal = React.lazy(() => import('./components/OpenS
 const SmcCalculatorValidatorModal = React.lazy(() => import('./components/SmcCalculatorValidatorModal').then(m => ({ default: m.SmcCalculatorValidatorModal })));
 const FeedbackModal = React.lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
 const LegalTermsPrivacyModal = React.lazy(() => import('./components/LegalTermsPrivacyModal').then(m => ({ default: m.LegalTermsPrivacyModal })));
+const SocExcaisresModal = React.lazy(() => import('./components/SocExcaisresModal').then(m => ({ default: m.SocExcaisresModal })));
 
 export const AppContent: React.FC = () => {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isStudentPortalOpen, setIsStudentPortalOpen] = useState(false);
   const [isApproverOpen, setIsApproverOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+  const [isSocOpen, setIsSocOpen] = useState(false);
   const [isMentorOpen, setIsMentorOpen] = useState(false);
   const [isSmcSuiteOpen, setIsSmcSuiteOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -48,6 +56,7 @@ export const AppContent: React.FC = () => {
   const [feedbackModule, setFeedbackModule] = useState<FeedbackModule>('calculador_smc');
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab>('terms');
+  const [shouldRender3DBackground, setShouldRender3DBackground] = useState(false);
   const [currentPath, setCurrentPath] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       return window.location.pathname;
@@ -56,6 +65,21 @@ export const AppContent: React.FC = () => {
   });
 
   const isNotFound = currentPath !== '/' && currentPath !== '' && currentPath !== '/index.html';
+
+  // Diferir la inicialización de Three.js hasta que el hilo principal esté libre tras el primer renderizado
+  useEffect(() => {
+    if (isNotFound || typeof window === 'undefined') return;
+    const win = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (win.requestIdleCallback) {
+      const idleId = win.requestIdleCallback(() => setShouldRender3DBackground(true), { timeout: 600 });
+      return () => win.cancelIdleCallback?.(idleId);
+    }
+    const timer = setTimeout(() => setShouldRender3DBackground(true), 200);
+    return () => clearTimeout(timer);
+  }, [isNotFound]);
 
   // Escuchar cambios de ruta de navegación en el historial (popstate)
   useEffect(() => {
@@ -76,8 +100,8 @@ export const AppContent: React.FC = () => {
     );
   }, [currentPath, isNotFound]);
 
-  // Asegura que al ingresar o recargar la página, SIEMPRE cargue y se posicione exactamente
-  // en la cabecera: "Investor Academy Al-hadida Invest · «Cultivando el crecimiento, nutriendo su capital»"
+  // Asegura que al ingresar o recargar la página, SIEMPRE cargue desde el inicio (y = 0)
+  // mostrando el encabezado: "Investor Academy Al-hadida Invest · «Cultivando el crecimiento, nutriendo su capital»"
   useEffect(() => {
     if (isNotFound) return;
 
@@ -85,42 +109,47 @@ export const AppContent: React.FC = () => {
       window.history.scrollRestoration = 'manual';
     }
 
-    const scrollToInvestorAcademy = () => {
-      // Forzar temporalmente scroll instantáneo desactivando smooth scroll
-      document.documentElement.style.scrollBehavior = 'auto';
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
-      const hero = document.getElementById('inicio') || document.getElementById('investor-academy');
-      if (hero) {
-        hero.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'start' });
-      }
+    let userInteracted = false;
+    const markUserInteracted = () => {
+      userInteracted = true;
     };
 
-    // 1. Ejecución instantánea en el primer ciclo
-    scrollToInvestorAcademy();
+    window.addEventListener('wheel', markUserInteracted, { passive: true, once: true });
+    window.addEventListener('touchstart', markUserInteracted, { passive: true, once: true });
+    window.addEventListener('pointerdown', markUserInteracted, { passive: true, once: true });
+    window.addEventListener('hashchange', markUserInteracted, { passive: true, once: true });
 
-    // 2. Refuerzo escalonado para neutralizar repintados tras carga de fuentes/imágenes
-    const timer1 = setTimeout(scrollToInvestorAcademy, 25);
-    const timer2 = setTimeout(scrollToInvestorAcademy, 100);
-    const timer3 = setTimeout(scrollToInvestorAcademy, 250);
-    const timer4 = setTimeout(() => {
-      scrollToInvestorAcademy();
-      // Restaurar el comportamiento de scroll suave para clics en enlaces internos
-      document.documentElement.style.scrollBehavior = '';
-    }, 500);
+    const scrollToTop = () => {
+      if (userInteracted) return;
+      document.documentElement.style.scrollBehavior = 'auto';
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
 
-    // 3. Cuando finalice la carga completa de recursos (imágenes de portada y tipografías)
-    const handleWindowLoad = () => scrollToInvestorAcademy();
+    scrollToTop();
+
+    const timers = [25, 100, 250, 500, 900, 1400].map((delay, idx, arr) =>
+      setTimeout(() => {
+        scrollToTop();
+        if (idx === arr.length - 1) {
+          document.documentElement.style.scrollBehavior = '';
+        }
+      }, delay)
+    );
+
+    const handleWindowLoad = () => scrollToTop();
+    const handlePageShow = () => scrollToTop();
+
     window.addEventListener('load', handleWindowLoad, { once: true });
-
-    // 4. Si el navegador restaura la sesión desde memoria o historial (pageshow / bfcache)
-    const handlePageShow = () => scrollToInvestorAcademy();
     window.addEventListener('pageshow', handlePageShow);
 
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
+      timers.forEach(clearTimeout);
+      window.removeEventListener('wheel', markUserInteracted);
+      window.removeEventListener('touchstart', markUserInteracted);
+      window.removeEventListener('pointerdown', markUserInteracted);
+      window.removeEventListener('hashchange', markUserInteracted);
       window.removeEventListener('load', handleWindowLoad);
       window.removeEventListener('pageshow', handlePageShow);
     };
@@ -161,6 +190,16 @@ export const AppContent: React.FC = () => {
     return () => window.removeEventListener('al_hadiqa_open_legal', handleOpenLegal);
   }, []);
 
+  // Escuchar evento global para abrir SOC EXCAISRES (Centro Autónomo de Ciberseguridad)
+  useEffect(() => {
+    const handleOpenSoc = () => {
+      setIsSocOpen(true);
+    };
+
+    window.addEventListener('al_hadiqa_open_soc', handleOpenSoc);
+    return () => window.removeEventListener('al_hadiqa_open_soc', handleOpenSoc);
+  }, []);
+
   if (isNotFound) {
     return (
       <>
@@ -189,6 +228,12 @@ export const AppContent: React.FC = () => {
               initialTab={legalModalTab}
             />
           )}
+          {isSocOpen && (
+            <SocExcaisresModal
+              isOpen={isSocOpen}
+              onClose={() => setIsSocOpen(false)}
+            />
+          )}
         </React.Suspense>
         <CookieConsentBanner />
       </>
@@ -197,7 +242,11 @@ export const AppContent: React.FC = () => {
 
   return (
     <>
-      <Background3D />
+      {shouldRender3DBackground && (
+        <React.Suspense fallback={null}>
+          <Background3D />
+        </React.Suspense>
+      )}
       <a className="skip-link" href="#contenido">
         Saltar al contenido principal
       </a>
@@ -209,7 +258,12 @@ export const AppContent: React.FC = () => {
         onOpenSecurity={() => setIsSecurityOpen(true)}
         onOpenAdvisorChat={() => setIsMentorOpen(true)}
         onOpenLiveVoice={() => setIsSmcSuiteOpen(true)}
+        onOpenSoc={() => setIsSocOpen(true)}
       />
+
+      <OfflineIndicator />
+      <LiveStreamMonitorBanner />
+      <DailyPersonalDevManager />
 
       <main id="contenido">
         <Hero
@@ -218,27 +272,47 @@ export const AppContent: React.FC = () => {
           onOpenSmcSuite={() => setIsSmcSuiteOpen(true)}
         />
         <Roadmap />
-        <FounderBiographySection onOpenAdvisorChat={() => setIsMentorOpen(true)} />
-        <TradingSection />
-        <TradingPlatformClone />
-        <StreamingHubSection />
-        <LiveClassesSection />
-        <LibrarySection />
-        <CommunityChatSection />
-        <MarketNewsSection />
-        <SmithBusinessSection />
-        <GamingSection />
-        <EcosystemSection />
-        <CapitalSection />
-        <FaqSection />
-        <NewsletterSection />
+        <React.Suspense fallback={<div style={{ minHeight: '240px' }} aria-hidden="true" />}>
+          <StudentDashboardSection />
+          <FounderBiographySection onOpenAdvisorChat={() => setIsMentorOpen(true)} />
+          <TradingSection />
+          <TradingPlatformClone />
+          <StreamingHubSection />
+          <LiveClassesSection />
+          <LibrarySection />
+          <CommunityChatSection />
+          <MarketNewsSection />
+          <SmithBusinessSection />
+          <GamingSection />
+          <EcosystemSection />
+          <CapitalSection />
+          <FaqSection />
+          <NewsletterSection />
+        </React.Suspense>
       </main>
 
-      <Footer />
+      <React.Suspense fallback={null}>
+        <Footer />
+      </React.Suspense>
 
       {/* Modales cargados bajo demanda con Suspense para máxima velocidad de carga */}
       <React.Suspense fallback={null}>
-        {isAdminOpen && <AdminPanelModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />}
+        {isAdminOpen && (
+          <AdminPanelModal
+            isOpen={isAdminOpen}
+            onClose={() => setIsAdminOpen(false)}
+            onOpenSoc={() => {
+              setIsAdminOpen(false);
+              setIsSocOpen(true);
+            }}
+          />
+        )}
+        {isSocOpen && (
+          <SocExcaisresModal
+            isOpen={isSocOpen}
+            onClose={() => setIsSocOpen(false)}
+          />
+        )}
         {isStudentPortalOpen && <StudentPortalModal isOpen={isStudentPortalOpen} onClose={() => setIsStudentPortalOpen(false)} />}
         {isApproverOpen && <PartnerApproverModal isOpen={isApproverOpen} onClose={() => setIsApproverOpen(false)} />}
         {isSecurityOpen && <SecurityComplianceModal isOpen={isSecurityOpen} onClose={() => setIsSecurityOpen(false)} />}
@@ -276,11 +350,13 @@ export const AppContent: React.FC = () => {
       </React.Suspense>
 
       {/* Bot Asistente Flotante Integrado (Guía para Nuevos Usuarios, Clases, Chat, Biblioteca, Permisos y Mentor) */}
-      <FloatingAssistantBot
-        onOpenStudentPortal={() => setIsStudentPortalOpen(true)}
-        onOpenAdvisorChat={() => setIsMentorOpen(true)}
-        onOpenLiveVoice={() => setIsMentorOpen(true)}
-      />
+      <React.Suspense fallback={null}>
+        <FloatingAssistantBot
+          onOpenStudentPortal={() => setIsStudentPortalOpen(true)}
+          onOpenAdvisorChat={() => setIsMentorOpen(true)}
+          onOpenLiveVoice={() => setIsMentorOpen(true)}
+        />
+      </React.Suspense>
 
       {/* Botón flotante discreto de Feedback y Correcciones */}
       <button

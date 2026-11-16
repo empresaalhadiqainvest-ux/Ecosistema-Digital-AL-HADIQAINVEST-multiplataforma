@@ -5264,3 +5264,174 @@ ul {
     transform: none;
   }
 }
+
+/* ============================================================
+   COMPATIBILIDAD TOTAL MÓVIL, TABLETS (ANDROID / IPAD), IPHONE & MAC + PWA
+   ============================================================ */
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-y: contain;
+}
+
+button, a, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(212, 175, 55, 0.18);
+}
+
+.site-header {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.hero {
+  padding-top: calc(clamp(6rem, 10vw, 8.5rem) + env(safe-area-inset-top, 0px));
+}
+
+.bar-menu-drawer {
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pwa-header-install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 35, 25, 0.92));
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  color: #6ee7b7;
+  font-family: var(--font-head);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+  white-space: nowrap;
+}
+
+.pwa-header-install-btn:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: var(--emerald);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.drawer-pwa-install-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(6, 35, 25, 0.95));
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.25s var(--ease);
+}
+
+.drawer-pwa-install-card:hover {
+  border-color: var(--emerald);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(9, 51, 37, 0.98));
+  transform: translateY(-1px);
+}
+
+.drawer-pwa-install-icon {
+  flex-shrink: 0;
+}
+
+.drawer-pwa-install-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.drawer-pwa-install-title {
+  font-family: var(--font-head);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #6ee7b7;
+}
+
+.drawer-pwa-install-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* Tablets (iPad & Android Tablets) */
+@media (max-width: 1024px) {
+  .wrap {
+    padding-inline: clamp(1rem, 3.5vw, 1.75rem);
+  }
+  .hero-pillars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Móviles (iPhone & Android Smartphones) */
+@media (max-width: 640px) {
+  .header-inner {
+    gap: 0.5rem;
+    min-height: 64px;
+  }
+  .brand {
+    font-size: clamp(0.88rem, 3.8vw, 1.08rem);
+    gap: 0.4rem;
+  }
+  .brand-lion-icon {
+    font-size: 1.2rem;
+  }
+  .header-right-actions {
+    gap: 0.4rem;
+  }
+  .bar-menu-trigger {
+    min-height: 44px;
+    padding: 0.45rem 0.75rem;
+    gap: 0.45rem;
+  }
+  .bar-menu-label {
+    display: none;
+  }
+  .pwa-header-install-btn {
+    min-height: 44px;
+    padding: 0.45rem 0.65rem;
+  }
+  .header-google-btn-compact,
+  .header-user-pill,
+  .drawer-close-btn,
+  .drawer-link,
+  .btn {
+    min-height: 44px;
+  }
+  .hero-pillars {
+    grid-template-columns: 1fr;
+  }
+  .hero__actions,
+  .hero__actions > div {
+    width: 100%;
+    align-items: stretch !important;
+    justify-content: center;
+  }
+  .hero__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  /* Evitar auto-zoom en Safari iOS al enfocar campos de texto */
+  input, select, textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
+@media (max-width: 390px) {
+  .pwa-header-install-label {
+    display: none;
+  }
+}
+

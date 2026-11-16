@@ -192,5 +192,36 @@ service cloud.firestore {
       // Actualización (cambio de estado, respuesta del admin) y borrado exclusivo del Administrador
       allow update, delete: if isBootstrappedAdmin();
     }
+
+    // SOC EXCAISRES: Detección y Respuesta Autónoma a Amenazas (SOAR)
+    match /soc_incidents/{incidentId} {
+      // El motor autónomo de mitigación puede registrar eventos de amenaza detectados
+      allow create: if true;
+      // Lectura, listado y gestión exclusiva para el Administrador Maestro
+      allow get, list, update, delete: if isBootstrappedAdmin();
+    }
+
+    match /soc_settings/{settingId} {
+      // Políticas del SOC legibles para calibración defensiva
+      allow get: if true;
+      // Modificación exclusiva por el Administrador Maestro
+      allow list, create, update, delete: if isBootstrappedAdmin();
+    }
+
+    match /soc_blocklist/{blockId} {
+      // Verificación rápida de estado de cuarentena
+      allow get: if true;
+      // Gestión y listado de entidades en cuarentena exclusivo para el Administrador
+      allow list, create, update, delete: if isBootstrappedAdmin();
+    }
+
+    // Logs de autenticación de Firebase para monitoreo continuo por SOC EXCAISRES
+    match /firebase_auth_logs/{logId} {
+      // Permite registrar eventos de autenticación (incluyendo intentos fallidos) desde la app
+      allow create: if true;
+      // Lectura, monitoreo en vivo, marcado de mitigación y limpieza exclusivo del Administrador
+      allow get, list, update, delete: if isBootstrappedAdmin();
+    }
   }
 }
+

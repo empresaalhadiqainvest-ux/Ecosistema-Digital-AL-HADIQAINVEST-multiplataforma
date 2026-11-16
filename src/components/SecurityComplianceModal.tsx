@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { generateSignedDownloadUrl, validateSignedDownloadToken } from '../utils/signedUrlService';
 import { scanFileForMalware, ScanReport } from '../utils/fileSecurityScanner';
@@ -9,9 +9,73 @@ interface SecurityComplianceModalProps {
   onClose: () => void;
 }
 
+interface ResilienceDashboardData {
+  healthDeep: {
+    status: string;
+    probes: Record<string, Record<string, unknown>>;
+    resources: {
+      memory: { rssMb: number; heapUsedMb: number; heapTotalMb: number; heapUtilizationPct: number };
+      cpu: { processPercent: number; cores: number; loadAvg1m: number };
+      eventLoopLagMs: number;
+    };
+  } | null;
+  metrics: {
+    uptimeSeconds: number;
+    nodeVersion: string;
+    traffic: {
+      totalRequests: number;
+      errors5xx: number;
+      blocked4xx: number;
+      activeWebSockets: number;
+      latencyMs: { p50: number; p95: number; p99: number };
+    };
+    selfHealing: {
+      watchdogActive: boolean;
+      eventsCount: number;
+      recentEvents: { id: string; timestamp: string; trigger: string; action: string; heapUsedMbBefore: number; heapUsedMbAfter: number }[];
+    };
+  } | null;
+  audit: {
+    owaspTop10Score: string;
+    polpStatus: {
+      firestoreRulesZeroTrustDefault: boolean;
+      rbacRolesConfigured: string[];
+      nonRootContainerConfigured: boolean;
+    };
+    sessionHardening: {
+      jwtAlgorithm: string;
+      cookieFlags: string[];
+      csrfProtection: string;
+    };
+    scaSummary: {
+      dependenciesCount: number;
+      devDependenciesCount: number;
+      cicdWorkflowPresent: boolean;
+      dockerfilePresent: boolean;
+      k8sManifestPresent: boolean;
+    };
+    secretVault: {
+      activeKid: string;
+      previousKid: string | null;
+      rotationCount: number;
+      lastRotatedAt: string;
+      nextScheduledRotationAt: string;
+      keySource: string;
+    };
+  } | null;
+  snapshots: {
+    snapshotId: string;
+    createdAt: string;
+    immutableSeal: string;
+    sizeBytes: number;
+    lastVerifiedAt: string | null;
+    lastRestoreTestResult: string;
+  }[];
+}
+
 export const SecurityComplianceModal: React.FC<SecurityComplianceModalProps> = ({ isOpen, onClose }) => {
   const { currentUser, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'owasp' | 'headers' | 'signed_urls' | 'antivirus' | 'privacy'>('owasp');
+  const [activeTab, setActiveTab] = useState<'owasp' | 'headers' | 'signed_urls' | 'antivirus' | 'privacy' | 'resilience'>('owasp');
 
   // Signed URL Tester State
   const [testResourceId, setTestResourceId] = useState('smc-institucional-vol1');
@@ -24,6 +88,47 @@ export const SecurityComplianceModal: React.FC<SecurityComplianceModalProps> = (
 
   // Privacy export notice
   const [privacyNotice, setPrivacyNotice] = useState<string | null>(null);
+
+  // Real Backend Observability, Self-Healing, Vault & Immutable Backups State
+  const [resilienceData, setResilienceData] = useState<ResilienceDashboardData>({
+    healthDeep: null,
+    metrics: null,
+    audit: null,
+    snapshots: [],
+  });
+  const [resilienceBusy, setResilienceBusy] = useState<string | null>(null);
+  const [resilienceMessage, setResilienceMessage] = useState<string | null>(null);
+
+  const loadResilienceTelemetry = useCallback(async () => {
+    try {
+      const [hRes, mRes, aRes, bRes] = await Promise.all([
+        fetch('/api/health/deep'),
+        fetch('/api/v1/observability/metrics'),
+        fetch('/api/v1/security/audit'),
+        fetch('/api/v1/backups/snapshots'),
+      ]);
+      const [healthDeep, metrics, audit, backupsData] = await Promise.all([
+        hRes.ok ? hRes.json() : null,
+        mRes.ok ? mRes.json() : null,
+        aRes.ok ? aRes.json() : null,
+        bRes.ok ? bRes.json() : { snapshots: [] },
+      ]);
+      setResilienceData({
+        healthDeep,
+        metrics,
+        audit,
+        snapshots: Array.isArray(backupsData?.snapshots) ? backupsData.snapshots : [],
+      });
+    } catch (err) {
+      console.warn('Error loading resilience diagnostics:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'resilience') {
+      void loadResilienceTelemetry();
+    }
+  }, [isOpen, activeTab, loadResilienceTelemetry]);
 
   if (!isOpen) return null;
 
@@ -279,6 +384,14 @@ export const SecurityComplianceModal: React.FC<SecurityComplianceModalProps> = (
             style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}
           >
             👤 Privacidad &amp; GDPR
+          </button>
+          <button
+            type="button"
+            className={`quiz__btn ${activeTab === 'resilience' ? 'active' : ''}`}
+            onClick={() => setActiveTab('resilience')}
+            style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}
+          >
+            🏗️ Observabilidad, Backups &amp; CI/CD
           </button>
         </div>
 
@@ -544,13 +657,216 @@ export const SecurityComplianceModal: React.FC<SecurityComplianceModalProps> = (
                     type="button"
                     className="btn btn--ghost"
                     onClick={() => {
-                      alert('Para solicitar la baja definitiva y eliminación de tu cuenta, contacta a empresaalhadiqainvest@gmail.com o pulsa "Darse de baja" en tus preferencias de notificación.');
+                      setPrivacyNotice('Para solicitar la baja definitiva y eliminación de tu cuenta, escribe a empresaalhadiqainvest@gmail.com o utiliza "Darse de baja" en Preferencias de Notificación.');
+                      setTimeout(() => setPrivacyNotice(null), 6000);
                     }}
                     style={{ fontSize: '0.82rem', padding: '0.55rem 1rem', color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.3)' }}
                   >
                     🗑️ Solicitar Supresión de Cuenta (Derecho al Olvido)
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: OBSERVABILIDAD, AUTO-HEALING, BACKUPS INMUTABLES & CI/CD */}
+          {activeTab === 'resilience' && (
+            <div style={{ display: 'grid', gap: '1.15rem' }}>
+              {resilienceMessage && (
+                <div style={{ padding: '0.7rem 1rem', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.14)', border: '1px solid var(--emerald)', color: '#a7f3d0', fontSize: '0.82rem', fontWeight: 600 }}>
+                  ✓ {resilienceMessage}
+                </div>
+              )}
+
+              {/* Controles operativos reales contra /api/v1/* */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem' }}>
+                <div>
+                  <h4 style={{ margin: 0, color: '#fff', fontSize: '0.98rem' }}>
+                    🏗️ Diagnóstico en Vivo: Auto-Healing, PoLP, Vault &amp; Backups
+                  </h4>
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.76rem', color: 'var(--muted)' }}>
+                    Lectura en tiempo real desde <code>/api/health/deep</code>, <code>/api/v1/observability/metrics</code> y <code>/api/v1/security/audit</code>.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    disabled={Boolean(resilienceBusy)}
+                    onClick={async () => {
+                      setResilienceBusy('heal');
+                      try {
+                        const r = await fetch('/api/v1/observability/self-heal', { method: 'POST' });
+                        if (r.ok) {
+                          setResilienceMessage('Auto-Healing ejecutado: cachés purgados y memoria compactada.');
+                          await loadResilienceTelemetry();
+                        }
+                      } finally {
+                        setResilienceBusy(null);
+                      }
+                    }}
+                    className="btn btn--emerald"
+                    style={{ fontSize: '0.76rem', padding: '0.45rem 0.85rem' }}
+                  >
+                    {resilienceBusy === 'heal' ? 'Ejecutando...' : '⚡ Ejecutar Auto-Healing'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={Boolean(resilienceBusy)}
+                    onClick={async () => {
+                      setResilienceBusy('rotate');
+                      try {
+                        const r = await fetch('/api/v1/security/rotate-keys', { method: 'POST' });
+                        const data = await r.json();
+                        if (r.ok) {
+                          setResilienceMessage(`Claves criptográficas rotadas. Nuevo KID activo: ${data.vault?.activeKid}`);
+                          await loadResilienceTelemetry();
+                        }
+                      } finally {
+                        setResilienceBusy(null);
+                      }
+                    }}
+                    className="btn btn--gold"
+                    style={{ fontSize: '0.76rem', padding: '0.45rem 0.85rem' }}
+                  >
+                    {resilienceBusy === 'rotate' ? 'Rotando...' : '🔑 Rotar Claves HMAC/JWT'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Métricas Reales de CPU, RAM, Latencia y Health Deep */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.85rem' }}>
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Salud Profunda &amp; Uptime</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--emerald)', marginTop: '0.25rem', fontVariantNumeric: 'tabular-nums' }}>
+                    {resilienceData.healthDeep?.status?.toUpperCase() || 'VERIFICANDO'} · {resilienceData.metrics?.uptimeSeconds ?? 0}s
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.25rem' }}>
+                    Event Loop Lag: {resilienceData.healthDeep?.resources.eventLoopLagMs ?? 0} ms
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Memoria &amp; CPU Node</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#93c5fd', marginTop: '0.25rem', fontVariantNumeric: 'tabular-nums' }}>
+                    {resilienceData.healthDeep?.resources.memory.heapUsedMb ?? 0} MB Heap
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.25rem', fontVariantNumeric: 'tabular-nums' }}>
+                    RSS: {resilienceData.healthDeep?.resources.memory.rssMb ?? 0} MB · CPU: {resilienceData.healthDeep?.resources.cpu.processPercent ?? 0}%
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Latencia &amp; Trazas API</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--gold)', marginTop: '0.25rem', fontVariantNumeric: 'tabular-nums' }}>
+                    p95: {resilienceData.metrics?.traffic.latencyMs.p95 ?? 0} ms
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.25rem', fontVariantNumeric: 'tabular-nums' }}>
+                    Req: {resilienceData.metrics?.traffic.totalRequests ?? 0} · 5xx: {resilienceData.metrics?.traffic.errors5xx ?? 0} · Bloq: {resilienceData.metrics?.traffic.blocked4xx ?? 0}
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Vault, PoLP &amp; SCA/CI</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', marginTop: '0.25rem', fontFamily: 'monospace' }}>
+                    {resilienceData.audit?.secretVault.activeKid || 'kid-active'}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.25rem' }}>
+                    Deps: {resilienceData.audit?.scaSummary.dependenciesCount ?? 0} · Docker: {resilienceData.audit?.scaSummary.dockerfilePresent ? 'Sí' : 'No'} · CI/CD: {resilienceData.audit?.scaSummary.cicdWorkflowPresent ? 'Sí' : 'No'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Backups Inmutables y Verificación de Restauración Aislada */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1.15rem 1.25rem', display: 'grid', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem' }}>
+                  <div>
+                    <h5 style={{ margin: 0, color: 'var(--gold)', fontSize: '0.92rem' }}>
+                      💾 Copias de Seguridad Inmutables (SHA-256) &amp; Prueba de Restauración Aislada
+                    </h5>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                      Snapshots sellados criptográficamente con validación en sandbox sin afectar producción.
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      disabled={Boolean(resilienceBusy)}
+                      onClick={async () => {
+                        setResilienceBusy('backup');
+                        try {
+                          const r = await fetch('/api/v1/backups/create', { method: 'POST' });
+                          const data = await r.json();
+                          if (r.ok) {
+                            setResilienceMessage(`Snapshot inmutable creado: ${data.snapshot?.snapshotId}`);
+                            await loadResilienceTelemetry();
+                          }
+                        } finally {
+                          setResilienceBusy(null);
+                        }
+                      }}
+                      className="btn btn--ghost"
+                      style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }}
+                    >
+                      + Crear Snapshot
+                    </button>
+                    <button
+                      type="button"
+                      disabled={Boolean(resilienceBusy)}
+                      onClick={async () => {
+                        setResilienceBusy('restore');
+                        try {
+                          const latestId = resilienceData.snapshots[0]?.snapshotId;
+                          const r = await fetch('/api/v1/backups/verify-restore', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ snapshotId: latestId }),
+                          });
+                          const data = await r.json();
+                          setResilienceMessage(
+                            data.status === 'VERIFIED_CLEAN'
+                              ? `Restauración aislada verificada OK (${data.snapshotId}) en ${data.durationMs}ms.`
+                              : `Error en verificación de integridad (${data.snapshotId}).`
+                          );
+                          await loadResilienceTelemetry();
+                        } finally {
+                          setResilienceBusy(null);
+                        }
+                      }}
+                      className="btn btn--emerald"
+                      style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }}
+                    >
+                      🧪 Probar Restauración Aislada
+                    </button>
+                  </div>
+                </div>
+
+                {resilienceData.snapshots.length > 0 && (
+                  <div style={{ display: 'grid', gap: '0.45rem' }}>
+                    {resilienceData.snapshots.slice(0, 4).map((snap) => (
+                      <div
+                        key={snap.snapshotId}
+                        style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 0.75rem', borderRadius: '6px', background: 'rgba(15, 23, 42, 0.75)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.76rem' }}
+                      >
+                        <div>
+                          <strong style={{ color: '#fff', fontFamily: 'monospace' }}>{snap.snapshotId}</strong>
+                          <span style={{ color: 'var(--muted)', marginLeft: '0.5rem', fontFamily: 'monospace' }}>
+                            SHA-256: {snap.immutableSeal.slice(0, 16)}… · {(snap.sizeBytes / 1024).toFixed(2)} KB
+                          </span>
+                        </div>
+                        <span style={{ color: snap.lastRestoreTestResult === 'VERIFIED_CLEAN' ? 'var(--emerald)' : 'var(--gold)', fontWeight: 700, fontFamily: 'monospace' }}>
+                          {snap.lastRestoreTestResult}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Resumen de Controles Multiplataforma, Contenedores y CI/CD */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem', fontSize: '0.79rem', color: '#cbd5e1', display: 'grid', gap: '0.35rem' }}>
+                <div><strong>• Sesiones &amp; Cookies:</strong> {resilienceData.audit?.sessionHardening.jwtAlgorithm || 'HS256'} · Flags: <code>{resilienceData.audit?.sessionHardening.cookieFlags.join('; ') || 'HttpOnly; Secure; SameSite=Strict'}</code></div>
+                <div><strong>• Mínimo Privilegio (PoLP):</strong> Zero-Trust <code>firestore.rules</code> ({resilienceData.audit?.polpStatus.firestoreRulesZeroTrustDefault ? 'Activo' : 'Verificando'}) + contenedor sin root (<code>USER node</code>).</div>
+                <div><strong>• Contenedores &amp; Zero-Downtime CI/CD:</strong> <code>Dockerfile</code> multi-stage, <code>docker-compose.yml</code>, <code>k8s/deployment.yaml</code> (<code>maxUnavailable: 0</code>) y pipeline <code>security-cicd.yml</code> (SAST + SCA <code>npm audit</code> + Smoke Probe).</div>
               </div>
             </div>
           )}

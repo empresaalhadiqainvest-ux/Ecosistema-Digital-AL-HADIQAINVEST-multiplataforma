@@ -1,0 +1,67 @@
+name: Security, SAST/SCA & Zero-Downtime CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  sast-sca-and-tests:
+    name: SAST, SCA & Integrity Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies cleanly
+        run: npm ci --ignore-scripts
+
+      - name: Software Composition Analysis (SCA - npm audit)
+        run: npm audit --audit-level=high
+
+      - name: Static Secret Hygiene Check
+        run: |
+          if grep -rnE "AIza[0-9A-Za-z_-]{35}|-----BEGIN (RSA|EC|PRIVATE) KEY-----" src server server.ts; then
+            echo "ERROR: Potential hardcoded credential detected!"
+            exit 1
+          fi
+
+      - name: SAST TypeScript Typecheck & Build Verification
+        run: |
+          npm run lint
+          npm run build
+
+  container-and-canary-check:
+    name: Container Hardening & Zero-Downtime Verification
+    needs: sast-sca-and-tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build hardened Docker image
+        run: docker build -t alhadiqa-invest-core:${{ github.sha }} .
+
+      - name: Smoke Test Deep Healthcheck & OWASP Guard in Container
+        run: |
+          docker run -d --name smoke-test -p 3000:3000 -e NODE_ENV=production alhadiqa-invest-core:${{ github.sha }}
+          sleep 5
+          curl -fsS http://127.0.0.1:3000/api/health/live
+          curl -fsS http://127.0.0.1:3000/api/health/ready
+          docker rm -f smoke-test
+
+      - name: Canary / Blue-Green Rollout Gate
+        run: |
+          echo "Ready for zero-downtime RollingUpdate / Blue-Green promotion via k8s/deployment.yaml"

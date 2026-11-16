@@ -176,6 +176,20 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, 
                 >
                   📚 Biblioteca
                 </a>
+                <a
+                  href="#dashboard-estudiantes"
+                  style={{
+                    color: '#a5f3fc',
+                    background: 'rgba(6, 182, 212, 0.12)',
+                    border: '1px solid rgba(6, 182, 212, 0.3)',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  📊 Dashboard
+                </a>
               </div>
             </div>
 
@@ -227,6 +241,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAdvisorChat, onOpenLiveVoice, 
                     width={1376}
                     height={768}
                     decoding="async"
+                    {...({ fetchpriority: 'high' } as React.ImgHTMLAttributes<HTMLImageElement>)}
                     alt="Presentación oficial de AL-HADIQA INVEST - Cultivando el crecimiento, nutriendo su capital"
                     className="hero-cover-image"
                     loading="eager"

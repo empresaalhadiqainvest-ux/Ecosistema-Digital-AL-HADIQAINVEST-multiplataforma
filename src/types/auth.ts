@@ -41,6 +41,8 @@ export interface AuthContextType {
   isActive: boolean;
   isApprover: boolean;
   isDemoUser: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
   signInWithGoogle: () => Promise<void>;
   signInAsDemo: (roleType?: DemoRoleType) => Promise<void>;
   signOut: () => Promise<void>;

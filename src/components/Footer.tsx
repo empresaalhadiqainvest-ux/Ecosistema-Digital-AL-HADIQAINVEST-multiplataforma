@@ -28,6 +28,7 @@ export const Footer: React.FC = () => {
           <nav aria-labelledby="footer-nav-title">
             <h2 className="footer-title" id="footer-nav-title">Divisiones</h2>
             <div className="footer-links">
+              <a href="#dashboard-estudiantes">Dashboard de Estudiantes</a>
               <a href="#roadmap">Roadmap del Alumno</a>
               <a href="#fundador">Biografía de Carlos Smith (CEO)</a>
               <a href="#streaming">Transmisión Streaming Oficial</a>
@@ -68,6 +69,20 @@ export const Footer: React.FC = () => {
                 rel="noopener noreferrer"
               >
                 Comunidad Gaming
+              </a>
+              <a
+                href="https://www.tiktok.com/@alhadiqa.capital"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                TikTok @alhadiqa.capital
+              </a>
+              <a
+                href="https://www.youtube.com/@AL-HADIQAINVEST"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                YouTube @AL-HADIQAINVEST
               </a>
             </div>
           </div>

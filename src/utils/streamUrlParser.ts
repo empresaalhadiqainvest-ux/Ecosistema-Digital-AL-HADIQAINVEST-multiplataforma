@@ -10,7 +10,7 @@
  */
 export function parseStreamEmbedUrl(rawUrl: string): {
   embedUrl: string;
-  source: 'youtube' | 'twitch' | 'facebook' | 'vimeo' | 'webrtc' | 'custom';
+  source: 'youtube' | 'tiktok' | 'twitch' | 'facebook' | 'vimeo' | 'webrtc' | 'custom';
   videoId?: string;
   isChannelLive?: boolean;
 } {
@@ -18,7 +18,23 @@ export function parseStreamEmbedUrl(rawUrl: string): {
     return { embedUrl: '', source: 'custom' };
   }
 
-  const trimmed = rawUrl.trim();
+  let trimmed = rawUrl.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Bloqueo estricto contra inyecciones javascript:, data:, vbscript:
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('vbscript:') ||
+    lower.includes('<script')
+  ) {
+    return { embedUrl: '', source: 'custom' };
+  }
+
+  // Forzar cifrado TLS/HTTPS en enlaces de transmisión
+  if (lower.startsWith('http://')) {
+    trimmed = trimmed.replace(/^http:\/\//i, 'https://');
+  }
 
   // WebRTC direct indicator
   if (trimmed.startsWith('webrtc://') || trimmed === 'webrtc_direct') {
@@ -63,6 +79,25 @@ export function parseStreamEmbedUrl(rawUrl: string): {
     return {
       embedUrl: `https://www.youtube-nocookie.com/embed/live_stream?channel=${ytChannelMatch[1]}&autoplay=1&rel=0`,
       source: 'youtube',
+      isChannelLive: true,
+    };
+  }
+
+  // TikTok Video (/video/ID) or TikTok Channel / Live (@alhadiqa.capital)
+  const tiktokVideoMatch = trimmed.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/i);
+  if (tiktokVideoMatch && tiktokVideoMatch[1]) {
+    const videoId = tiktokVideoMatch[1];
+    return {
+      embedUrl: `https://www.tiktok.com/embed/v2/${videoId}`,
+      source: 'tiktok',
+      videoId,
+    };
+  }
+
+  if (lower.includes('tiktok.com')) {
+    return {
+      embedUrl: trimmed.includes('/live') ? trimmed : `${trimmed.replace(/\/+$/, '')}/live`,
+      source: 'tiktok',
       isChannelLive: true,
     };
   }

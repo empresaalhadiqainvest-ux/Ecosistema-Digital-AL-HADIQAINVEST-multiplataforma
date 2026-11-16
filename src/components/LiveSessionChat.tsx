@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
+import { socService } from '../services/socService';
 
 export interface LiveSessionChatProps {
   classId: string;
@@ -88,10 +89,10 @@ export const LiveSessionChat: React.FC<LiveSessionChatProps> = ({
     };
   }, []);
 
-  // Auto-scroll when messages change unless user has scrolled up
+  // Auto-scroll strictly inside chat container (never scroll the main page window)
   useEffect(() => {
-    if (!isScrolledUp) {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!isScrolledUp && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, isScrolledUp]);
 
@@ -104,12 +105,31 @@ export const LiveSessionChat: React.FC<LiveSessionChatProps> = ({
 
   const scrollToBottom = () => {
     setIsScrolledUp(false);
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
   };
 
   const handleSendMessage = async (customText?: string) => {
     const textToSend = (customText || inputText).trim();
     if (!currentUser || !textToSend || isSubmitting) return;
+
+    // Inspección de ciberseguridad SOC EXCAISRES contra inyecciones XSS/SQLi en chat en vivo
+    const threat = socService.inspectPayload(textToSend);
+    if (threat.isThreat && threat.vector) {
+      socService.detectAndMitigate({
+        attackVector: threat.vector,
+        severity: 'HIGH',
+        targetEndpoint: '/live-session/chat',
+        payloadSample: threat.sample || textToSend.slice(0, 100),
+        details: 'Intento de inyección en chat de transmisión en vivo bloqueado.',
+      });
+      if (!customText) setInputText('');
+      return;
+    }
 
     setIsSubmitting(true);
     try {

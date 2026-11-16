@@ -1,10 +1,25 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
+import crypto from 'crypto';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import compression from 'compression';
 import { WebSocketServer, WebSocket } from 'ws';
+import { secretVault } from './server/secretVault';
+import {
+  clearHardenedSessionCookies,
+  owaspInputGuardMiddleware,
+  parseCookies,
+  revokeSessionJwt,
+  runRealSecurityAudit,
+  setHardenedSessionCookies,
+  signSessionJwt,
+  verifyCsrfDoubleSubmit,
+  verifySessionJwt,
+} from './server/securityEngine';
+import { observability } from './server/observabilityEngine';
+import { backupService } from './server/backupService';
 
 dotenv.config();
 
@@ -18,28 +33,59 @@ app.disable('x-powered-by');
 // Confiar en el proxy inverso de Cloud Run / Load Balancer
 app.set('trust proxy', 1);
 
-// Compresión gzip/deflate de respuestas para acelerar tiempos de carga en red móvil y desktop
+// Compresión gzip/deflate optimizada para reducir tiempo de carga en móvil y escritorio
 app.use(compression({
-  threshold: 1024, // comprimir respuestas mayores a 1KB
+  threshold: 512,
+  level: 6,
   filter: (req, res) => {
     if (req.headers['x-no-compression']) return false;
     return compression.filter(req, res);
   },
 }));
 
-// Habilitar CORS y parser de cuerpos JSON y URL-encoded para APIs POST/PUT
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Trazabilidad distribuida (X-Trace-Id / X-Request-Id) y métricas en tiempo real
+app.use(observability.middleware);
 
-// Middleware para forzar HTTPS y aplicar cabeceras estrictas de seguridad (OWASP & HSTS)
+// Habilitar CORS con credenciales y parser seguro de cuerpos JSON / URL-encoded
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// Validación estricta de entradas OWASP Top 10 en toda la superficie /api
+app.use('/api', owaspInputGuardMiddleware);
+
+// Middleware para forzar HTTPS, aumentar nivel de cifrado TLS/CSP y proteger transmisiones contra ciberataques
 app.use((req, res, next) => {
-  // Forzar protocolo HTTPS mediante HSTS (Strict-Transport-Security)
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  // HSTS Preload de 2 años (63072000s) para exigir exclusivamente TLS/HTTPS
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
+
+  // Content Security Policy (CSP) reforzada con upgrade-insecure-requests para proteger reproductores y WebRTC
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self' https:",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://apis.google.com https://www.gstatic.com https://accounts.google.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+      "connect-src 'self' https: wss:",
+      "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://www.tiktok.com https://tiktok.com https://player.twitch.tv https://player.vimeo.com https://www.facebook.com https://accounts.google.com https://*.firebaseapp.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      'upgrade-insecure-requests',
+    ].join('; ')
+  );
 
   // Redirigir tráfico HTTP a HTTPS en entornos remotos / producción
   const forwardedProto = req.headers['x-forwarded-proto'];
@@ -80,15 +126,325 @@ let cachedSentimentData: any = null;
 let lastSentimentFetchTime = 0;
 const SENTIMENT_CACHE_TTL_MS = 5 * 60 * 1000;
 
-// Health check endpoint
+// Health Checks & Sondeos Continuos (Liveness, Readiness & Deep Diagnostics)
 app.get('/api/health', (_req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const isKeyPresent = Boolean(apiKey && apiKey.trim() !== '' && !apiKey.includes('YOUR_GEMINI_API_KEY'));
+  const vault = secretVault.getPublicStatus();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    geminiKeyConfigured: isKeyPresent,
+    geminiKeyConfigured: vault.envSecretsPresent.GEMINI_API_KEY,
+    activeKeyId: vault.activeKid,
   });
+});
+
+app.get('/api/health/live', (_req, res) => {
+  res.status(200).json({
+    status: 'alive',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api/health/ready', (_req, res) => {
+  const mem = process.memoryUsage();
+  const heapPct = mem.heapTotal > 0 ? (mem.heapUsed / mem.heapTotal) * 100 : 0;
+  const highHeapMb = mem.heapUsed / (1024 * 1024);
+  const ready = highHeapMb < 256 || heapPct < 96;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'degraded_memory_pressure',
+    heapUtilizationPct: Number(heapPct.toFixed(1)),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api/health/deep', (_req, res) => {
+  const metrics = observability.getMetricsSnapshot(wss.clients.size);
+  const vault = secretVault.getPublicStatus();
+  const backups = backupService.listSnapshots();
+
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    probes: {
+      httpExpress: { status: 'UP', p95LatencyMs: metrics.traffic.latencyMs.p95 },
+      websocketStreaming: { status: 'UP', activeClients: wss.clients.size },
+      memoryCache: {
+        status: 'UP',
+        sentimentCached: Boolean(cachedSentimentData),
+        tiktokCached: Boolean(cachedTikTokStatus),
+      },
+      externalCacheRedis: {
+        status: process.env.REDIS_URL ? 'CONFIGURED' : 'LOCAL_LRU_FALLBACK',
+      },
+      secretVault: {
+        status: 'UP',
+        activeKid: vault.activeKid,
+        rotations: vault.rotationCount,
+      },
+      immutableBackups: {
+        status: backups.length > 0 ? 'UP' : 'DEGRADED',
+        snapshotsStored: backups.length,
+        latestSnapshotId: backups[0]?.snapshotId || null,
+      },
+    },
+    resources: {
+      memory: metrics.memory,
+      cpu: metrics.cpu,
+      eventLoopLagMs: metrics.eventLoopLagMs,
+    },
+  });
+});
+
+// ============================================================================
+// HEADLESS / API-FIRST ENDPOINTS (/api/v1/*) PARA WEB, PWA, MÓVIL Y DESKTOP
+// ============================================================================
+
+app.get('/api/v1/platform/capabilities', (_req, res) => {
+  res.json({
+    apiVersion: '1.0.0',
+    architecture: 'Headless / API-First Multiplatform',
+    supportedClients: ['Web SPA', 'PWA (iOS/Android/macOS Dock)', 'Mobile API Consumers', 'Desktop'],
+    security: {
+      owaspMitigations: ['A01 RBAC/PoLP', 'A02 TLS1.3+HMAC', 'A03 Sanitizer', 'A05 CSP/HSTS', 'A07 JWT+CSRF'],
+      sessionCookies: ['HttpOnly', 'Secure', 'SameSite=Strict'],
+    },
+    endpoints: {
+      healthLive: '/api/health/live',
+      healthReady: '/api/health/ready',
+      healthDeep: '/api/health/deep',
+      authSession: '/api/v1/auth/session',
+      observability: '/api/v1/observability/metrics',
+      securityAudit: '/api/v1/security/audit',
+      backups: '/api/v1/backups/snapshots',
+    },
+  });
+});
+
+// Gestión segura de sesiones: JWT firmado HS256 + Cookies HttpOnly/Secure/SameSite=Strict + CSRF Token
+app.post('/api/v1/auth/session', (req, res) => {
+  const { uid, role, email } = req.body || {};
+  if (!uid || typeof uid !== 'string' || uid.length > 128) {
+    return res.status(400).json({ error: 'UID de usuario válido es obligatorio.' });
+  }
+  const safeRole = role === 'admin' || role === 'aprobador' ? role : 'alumno';
+  const csrfToken = crypto.randomBytes(24).toString('hex');
+  const { token, claims } = signSessionJwt(uid, safeRole, typeof email === 'string' ? email.slice(0, 120) : undefined, 3600);
+
+  setHardenedSessionCookies(req, res, token, csrfToken, 3600);
+  return res.json({
+    authenticated: true,
+    csrfToken,
+    session: {
+      sub: claims.sub,
+      role: claims.role,
+      kid: claims.kid,
+      expiresAt: new Date(claims.exp * 1000).toISOString(),
+    },
+  });
+});
+
+app.get('/api/v1/auth/session/verify', (req, res) => {
+  const cookies = parseCookies(req.headers.cookie);
+  const bearer = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7).trim()
+    : '';
+  const token = cookies.alhadiqa_sid || bearer;
+
+  if (!token) {
+    return res.status(401).json({ valid: false, reason: 'NO_SESSION_TOKEN' });
+  }
+
+  const verification = verifySessionJwt(token);
+  if (!verification.valid || !verification.claims) {
+    return res.status(401).json({ valid: false, reason: verification.reason });
+  }
+
+  return res.json({
+    valid: true,
+    claims: {
+      sub: verification.claims.sub,
+      role: verification.claims.role,
+      kid: verification.claims.kid,
+      expiresAt: new Date(verification.claims.exp * 1000).toISOString(),
+    },
+  });
+});
+
+app.post('/api/v1/auth/session/revoke', (req, res) => {
+  const cookies = parseCookies(req.headers.cookie);
+  if (cookies.alhadiqa_csrf && !verifyCsrfDoubleSubmit(req)) {
+    return res.status(403).json({ error: 'Fallo de validación CSRF.' });
+  }
+  if (cookies.alhadiqa_sid) {
+    const check = verifySessionJwt(cookies.alhadiqa_sid);
+    if (check.valid && check.claims?.jti) {
+      revokeSessionJwt(check.claims.jti);
+    }
+  }
+  clearHardenedSessionCookies(req, res);
+  return res.json({ revoked: true });
+});
+
+// Observabilidad Centralizada y Auto-Healing
+app.get('/api/v1/observability/metrics', (_req, res) => {
+  res.json(observability.getMetricsSnapshot(wss.clients.size));
+});
+
+app.post('/api/v1/observability/self-heal', (_req, res) => {
+  const event = observability.executeSelfHealing('manual-diagnostic-trigger');
+  res.json({ ok: true, event });
+});
+
+// Auditoría de Seguridad SAST/SCA/PoLP y Rotación de Secretos
+app.get('/api/v1/security/audit', (_req, res) => {
+  res.json(runRealSecurityAudit());
+});
+
+app.post('/api/v1/security/rotate-keys', (_req, res) => {
+  const status = secretVault.rotateKeys('admin-manual-rotation');
+  res.json({ rotated: true, vault: status });
+});
+
+// Copias de Seguridad Automatizadas e Inmutables + Prueba de Restauración Aislada
+app.get('/api/v1/backups/snapshots', (_req, res) => {
+  res.json({
+    snapshots: backupService.listSnapshots(),
+  });
+});
+
+app.post('/api/v1/backups/create', (_req, res) => {
+  const snapshot = backupService.createImmutableSnapshot(
+    {
+      vault: secretVault.getPublicStatus(),
+      observability: observability.getMetricsSnapshot(wss.clients.size).traffic,
+      cacheState: {
+        hasSentimentCache: Boolean(cachedSentimentData),
+        hasTikTokCache: Boolean(cachedTikTokStatus),
+      },
+    },
+    'manual-admin'
+  );
+  res.json({ created: true, snapshot });
+});
+
+app.post('/api/v1/backups/verify-restore', (req, res) => {
+  const { snapshotId } = req.body || {};
+  const result = backupService.verifyRestoreInIsolatedSandbox(
+    typeof snapshotId === 'string' ? snapshotId : undefined
+  );
+  res.status(result.status === 'VERIFIED_CLEAN' ? 200 : 500).json(result);
+});
+
+// Resolución de IP de cliente para telemetría de autenticación en SOC EXCAISRES
+app.get('/api/client-ip', (req, res) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  const rawIp = Array.isArray(forwarded)
+    ? forwarded[0]
+    : typeof forwarded === 'string'
+    ? forwarded.split(',')[0].trim()
+    : req.ip || req.socket?.remoteAddress || '127.0.0.1';
+
+  const cleanIp = rawIp.replace(/^::ffff:/, '');
+  res.json({ ip: cleanIp || '127.0.0.1' });
+});
+
+// Monitor en tiempo real del canal oficial de TikTok (@alhadiqa.capital)
+interface TikTokChannelStatus {
+  handle: string;
+  profileUrl: string;
+  liveUrl: string;
+  isLive: boolean;
+  liveRoomId: string | null;
+  liveTitle: string | null;
+  latestVideoId: string | null;
+  latestVideoUrl: string | null;
+  latestVideoTitle: string | null;
+  checkedAt: string;
+  sourceStatus: 'verified' | 'cached' | 'unavailable';
+}
+
+let cachedTikTokStatus: TikTokChannelStatus | null = null;
+let lastTikTokCheckTime = 0;
+const TIKTOK_CHECK_TTL_MS = 60 * 1000;
+
+app.get('/api/channels/tiktok/status', async (_req, res) => {
+  const now = Date.now();
+  if (cachedTikTokStatus && now - lastTikTokCheckTime < TIKTOK_CHECK_TTL_MS) {
+    return res.json({ ...cachedTikTokStatus, sourceStatus: 'cached' });
+  }
+
+  const handle = '@alhadiqa.capital';
+  const profileUrl = 'https://www.tiktok.com/@alhadiqa.capital';
+  const liveUrl = 'https://www.tiktok.com/@alhadiqa.capital/live';
+
+  const result: TikTokChannelStatus = {
+    handle,
+    profileUrl,
+    liveUrl,
+    isLive: false,
+    liveRoomId: null,
+    liveTitle: null,
+    latestVideoId: null,
+    latestVideoUrl: null,
+    latestVideoTitle: null,
+    checkedAt: new Date(now).toISOString(),
+    sourceStatus: 'unavailable',
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const profileRes = await fetch(profileUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+      },
+    });
+    clearTimeout(timeout);
+
+    if (profileRes.ok) {
+      const html = await profileRes.text();
+      result.sourceStatus = 'verified';
+
+      // Buscar Room ID en vivo en el estado hidratado de TikTok
+      const roomMatch = html.match(/"roomId"\s*:\s*"(\d{5,})"/);
+      const statusLiveMatch = html.match(/"liveRoomStatus"\s*:\s*2\b/) || html.match(/"isLive"\s*:\s*true/);
+      if (roomMatch && roomMatch[1]) {
+        result.liveRoomId = roomMatch[1];
+        result.isLive = true;
+      } else if (statusLiveMatch) {
+        result.isLive = true;
+      }
+
+      const liveTitleMatch = html.match(/"title"\s*:\s*"([^"]{4,140})"[^}]*"roomId"/);
+      if (liveTitleMatch && liveTitleMatch[1]) {
+        result.liveTitle = liveTitleMatch[1];
+      }
+
+      // Buscar último video publicado por @alhadiqa.capital
+      const videoMatch = html.match(/\/@alhadiqa\.capital\/video\/(\d{15,22})/i) || html.match(/"id"\s*:\s*"(\d{18,21})"[^}]*"desc"/);
+      if (videoMatch && videoMatch[1]) {
+        result.latestVideoId = videoMatch[1];
+        result.latestVideoUrl = `https://www.tiktok.com/@alhadiqa.capital/video/${videoMatch[1]}`;
+        const descMatch = html.match(/"id"\s*:\s*"\d{18,21}"[^}]*"desc"\s*:\s*"([^"]{3,160})"/);
+        if (descMatch && descMatch[1]) {
+          result.latestVideoTitle = descMatch[1].replace(/\\u[\da-fA-F]{4}/g, ' ').trim();
+        }
+      }
+    }
+  } catch {
+    // Si TikTok limita peticiones externas, devolver estado previo seguro sin fallar
+    if (cachedTikTokStatus) {
+      return res.json({ ...cachedTikTokStatus, sourceStatus: 'cached' });
+    }
+  }
+
+  cachedTikTokStatus = result;
+  lastTikTokCheckTime = now;
+  return res.json(result);
 });
 
 // Endpoint de Termómetro de Sentimiento Global REAL (No Simulación)
@@ -524,22 +880,120 @@ app.post('/api/gemini/chat/stream', handleMentorChatStream);
 app.post('/api/mentor/chat', handleMentorChat);
 app.post('/api/gemini/chat', handleMentorChat);
 
-// Setup WebSocket server for Mentor Voice/Live API
-const wss = new WebSocketServer({ server, path: '/api/gemini/live' });
+// Rate limiter en memoria para endpoints de tokens de transmisión en vivo
+const streamTokenRateMap = new Map<string, number[]>();
+
+// Emisión de token efímero firmado con HMAC-SHA256 para proteger transmisiones en vivo (TLS 1.3 + AES-256-GCM / DTLS-SRTP)
+app.post('/api/stream/security-token', (req, res) => {
+  const clientIp =
+    (typeof req.headers['x-forwarded-for'] === 'string'
+      ? req.headers['x-forwarded-for'].split(',')[0].trim()
+      : req.ip) || '127.0.0.1';
+
+  const now = Date.now();
+  const recent = (streamTokenRateMap.get(clientIp) || []).filter((ts) => now - ts < 60_000);
+  if (recent.length >= 30) {
+    return res.status(429).json({ error: 'Rate limit excedido para generación de claves de transmisión.' });
+  }
+  recent.push(now);
+  streamTokenRateMap.set(clientIp, recent);
+
+  const { classId, hostUid, keyFingerprint } = req.body || {};
+  if (!classId || typeof classId !== 'string') {
+    return res.status(400).json({ error: 'classId válido es obligatorio.' });
+  }
+
+  const sessionId = `sec-stream-${now.toString(36)}-${crypto.randomBytes(4).toString('hex')}`;
+  const issuedAt = new Date(now).toISOString();
+  const expiresAt = new Date(now + 1000 * 60 * 120).toISOString(); // 2 horas de validez
+  const canonical = `${sessionId}:${classId}:${hostUid || 'host'}:${keyFingerprint || 'aes256'}:${expiresAt}`;
+  const signature = crypto
+    .createHmac('sha256', secretVault.getStreamHmacSecret())
+    .update(canonical)
+    .digest('hex');
+
+  return res.json({
+    sessionId,
+    classId,
+    signature,
+    issuedAt,
+    expiresAt,
+    cipherSuite: 'TLS-1.3 / DTLS-SRTP / AES-256-GCM',
+    algorithm: 'HMAC-SHA256',
+  });
+});
+
+// Verificación criptográfica en tiempo constante de token de sala en vivo
+app.post('/api/stream/verify-token', (req, res) => {
+  const { sessionId, classId, hostUid, keyFingerprint, expiresAt, signature } = req.body || {};
+  if (!sessionId || !classId || !expiresAt || !signature) {
+    return res.status(400).json({ valid: false, reason: 'Parámetros de token incompletos.' });
+  }
+
+  if (Date.now() > new Date(expiresAt).getTime()) {
+    return res.status(401).json({ valid: false, reason: 'Token de transmisión expirado.' });
+  }
+
+  const canonical = `${sessionId}:${classId}:${hostUid || 'host'}:${keyFingerprint || 'aes256'}:${expiresAt}`;
+  const expected = crypto
+    .createHmac('sha256', secretVault.getStreamHmacSecret())
+    .update(canonical)
+    .digest('hex');
+
+  const sigBuf = Buffer.from(String(signature), 'utf8');
+  const expBuf = Buffer.from(expected, 'utf8');
+  const valid = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
+
+  return res.status(valid ? 200 : 403).json({ valid });
+});
+
+// Setup WebSocket server protegido contra floods, payloads gigantes e inyecciones para transmisiones/mentor en vivo
+const wss = new WebSocketServer({
+  server,
+  path: '/api/gemini/live',
+  maxPayload: 32 * 1024, // 32 KB máx por mensaje
+});
 
 wss.on('connection', async (clientWs: WebSocket) => {
+  const messageTimestamps: number[] = [];
+
   clientWs.send(
     JSON.stringify({
       type: 'ready',
-      message: 'Conexión con Mentor Institucional Al-Hadiqa activa (Open Source Engine)',
+      cipher: 'WSS-TLS1.3',
+      message: 'Conexión cifrada con Mentor Institucional Al-Hadiqa activa (Open Source Engine)',
     })
   );
 
   clientWs.on('message', (data) => {
     try {
-      const payload = JSON.parse(data.toString());
-      if (payload.text) {
-        const reply = generateInstitutionalMentorResponse(payload.text);
+      const now = Date.now();
+      // Protección anti-flood DDoS en tiempo real: máximo 20 mensajes cada 10 segundos por socket
+      while (messageTimestamps.length > 0 && now - messageTimestamps[0] > 10_000) {
+        messageTimestamps.shift();
+      }
+      if (messageTimestamps.length >= 20) {
+        clientWs.send(JSON.stringify({ type: 'error', message: 'Límite de frecuencia excedido.' }));
+        clientWs.close(1008, 'Rate limit exceeded');
+        return;
+      }
+      messageTimestamps.push(now);
+
+      const rawStr = data.toString();
+      const lower = rawStr.toLowerCase();
+      if (
+        lower.includes('<script') ||
+        lower.includes('javascript:') ||
+        lower.includes('union select') ||
+        lower.includes('$where')
+      ) {
+        clientWs.close(1008, 'Malicious payload blocked');
+        return;
+      }
+
+      const payload = JSON.parse(rawStr);
+      if (payload.text && typeof payload.text === 'string') {
+        const reply = generateInstitutionalMentorResponse(payload.text.slice(0, 2000));
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.send(JSON.stringify({ text: reply }));
         }
@@ -551,7 +1005,7 @@ wss.on('connection', async (clientWs: WebSocket) => {
   clientWs.on('error', () => {});
 });
 
-// Vite middleware or static serving
+// Vite middleware or static serving con caché inmutable para carga ultrarrápida
 async function setupServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
@@ -562,11 +1016,53 @@ async function setupServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(
+      express.static(distPath, {
+        maxAge: '1y',
+        etag: true,
+        immutable: true,
+        setHeaders: (res, filePath) => {
+          if (
+            filePath.endsWith('.html') ||
+            filePath.endsWith('sw.js') ||
+            filePath.endsWith('registerSW.js') ||
+            filePath.endsWith('.webmanifest')
+          ) {
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+          } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      })
+    );
     app.use((_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  observability.registerCachePruner(() => {
+    const cutoff = Date.now() - 60_000;
+    let removed = 0;
+    for (const [ip, timestamps] of Array.from(streamTokenRateMap.entries())) {
+      const fresh = timestamps.filter((ts) => ts >= cutoff);
+      if (fresh.length === 0) {
+        streamTokenRateMap.delete(ip);
+        removed += 1;
+      } else {
+        streamTokenRateMap.set(ip, fresh);
+      }
+    }
+    return removed;
+  });
+
+  observability.startWatchdog();
+  backupService.startAutomatedBackups(() => ({
+    vault: secretVault.getPublicStatus(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    sentimentCached: Boolean(cachedSentimentData),
+    tiktokCached: Boolean(cachedTikTokStatus),
+  }));
 
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);

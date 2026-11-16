@@ -46,6 +46,7 @@ import {
 interface AdminPanelModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenSoc?: () => void;
 }
 
 interface NotificationItem {
@@ -66,7 +67,7 @@ interface LibraryItem {
   downloadCount: number;
 }
 
-export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClose }) => {
+export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClose, onOpenSoc }) => {
   const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'classes' | 'chat' | 'library' | 'broadcast' | 'security' | 'feedback'>('metrics');
   const [feedbackReports, setFeedbackReports] = useState<FeedbackReportItem[]>([]);
   const [feedbackCategoryFilter, setFeedbackCategoryFilter] = useState<'all' | FeedbackCategory>('all');
@@ -742,26 +743,56 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'rgba(148, 163, 184, 0.1)',
-              border: '1px solid var(--line)',
-              color: 'var(--text)',
-              borderRadius: '50%',
-              width: '36px',
-              height: '36px',
-              fontSize: '1.1rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-label="Cerrar panel"
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {onOpenSoc && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenSoc();
+                }}
+                style={{
+                  background: 'rgba(6, 78, 59, 0.45)',
+                  border: '1px solid rgba(16, 185, 129, 0.5)',
+                  color: '#6ee7b7',
+                  borderRadius: '8px',
+                  padding: '0.45rem 0.85rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all 0.2s ease',
+                }}
+                title="Abrir SOC EXCAISRES (Centro Autónomo de Ciberseguridad)"
+              >
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                <span>🛡️ SOC EXCAISRES</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'rgba(148, 163, 184, 0.1)',
+                border: '1px solid var(--line)',
+                color: 'var(--text)',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                fontSize: '1.1rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              aria-label="Cerrar panel"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Action Notice */}
@@ -2218,6 +2249,59 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                       <strong style={{ color: 'var(--emerald)' }}>ClamAV 1.4 &amp; Magic Bytes (Activo)</strong>
                     </div>
                   </div>
+                </div>
+
+                {/* 3. SOC EXCAISRES Automated Threat Response */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.35), rgba(15, 23, 42, 0.9))',
+                    border: '1px solid rgba(16, 185, 129, 0.45)',
+                    borderRadius: 'var(--radius)',
+                    padding: '1.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <span style={{ fontSize: '1.4rem' }}>⚡</span>
+                        <h4 style={{ margin: 0, color: '#34d399', fontSize: '1.1rem', fontFamily: 'var(--font-head)' }}>
+                          SOC EXCAISRES · SOAR Autónomo
+                        </h4>
+                      </div>
+                      <span className="badge badge--emerald" style={{ fontSize: '0.7rem' }}>
+                        Respuesta &lt; 50ms
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.5, marginBottom: '1rem' }}>
+                      Sistema automatizado de ciberdefensa: detección heurística de SQLi/XSS, mitigación de fuerza bruta, trampa Honeypot de bots maliciosos y aislamiento de amenazas en tiempo real.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '1.25rem', fontSize: '0.78rem' }}>
+                      <div style={{ padding: '0.6rem', background: 'var(--surface)', borderRadius: '6px' }}>
+                        <span style={{ color: 'var(--muted)', display: 'block' }}>Modo de Mitigación:</span>
+                        <strong style={{ color: '#34d399' }}>Auto-Cuarentena Activa</strong>
+                      </div>
+                      <div style={{ padding: '0.6rem', background: 'var(--surface)', borderRadius: '6px' }}>
+                        <span style={{ color: 'var(--muted)', display: 'block' }}>Simulador Sandbox:</span>
+                        <strong style={{ color: '#93c5fd' }}>Disponible</strong>
+                      </div>
+                    </div>
+                  </div>
+                  {onOpenSoc && (
+                    <button
+                      type="button"
+                      className="btn btn--emerald"
+                      onClick={() => {
+                        onClose();
+                        onOpenSoc();
+                      }}
+                      style={{ width: '100%', padding: '0.65rem 1rem', fontSize: '0.84rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                    >
+                      <span>🛡️ Abrir Consola SOC EXCAISRES</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

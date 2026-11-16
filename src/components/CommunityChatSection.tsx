@@ -33,7 +33,8 @@ export const CommunityChatSection: React.FC = () => {
   const [isGlobalMuted, setIsGlobalMuted] = useState(false);
   const [securityNotice, setSecurityNotice] = useState<string | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialMessagesLoadRef = useRef(true);
 
   useEffect(() => {
     const q = query(collection(db, 'chat_messages'), orderBy('createdAt', 'asc'), limit(50));
@@ -75,7 +76,14 @@ export const CommunityChatSection: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = chatContainerRef.current;
+    if (!container) return;
+    if (isInitialMessagesLoadRef.current) {
+      isInitialMessagesLoadRef.current = false;
+      container.scrollTop = container.scrollHeight;
+      return;
+    }
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
   const showSecurityWarning = (msg: string) => {
@@ -236,6 +244,7 @@ export const CommunityChatSection: React.FC = () => {
 
           {/* Messages Body */}
           <div
+            ref={chatContainerRef}
             style={{
               flex: 1,
               overflowY: 'auto',
@@ -371,7 +380,6 @@ export const CommunityChatSection: React.FC = () => {
                 );
               })
             )}
-            <div ref={chatEndRef} />
           </div>
 
           {/* Security & Threat Notice Banner */}

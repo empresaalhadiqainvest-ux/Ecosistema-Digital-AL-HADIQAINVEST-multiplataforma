@@ -1,0 +1,63 @@
+services:
+  alhadiqa-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: alhadiqa-invest-core:latest
+    container_name: alhadiqa-invest-core
+    restart: always
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      REDIS_URL: redis://alhadiqa-redis:6379
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 120s
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3000/api/health/ready']
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      alhadiqa-redis:
+        condition: service_healthy
+
+  alhadiqa-redis:
+    image: redis:7-alpine
+    container_name: alhadiqa-redis
+    restart: always
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory', '128mb', '--maxmemory-policy', 'allkeys-lru']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+    driver: local

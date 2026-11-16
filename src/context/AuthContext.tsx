@@ -3,6 +3,7 @@ import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db, loginWithGoogle, logoutUser, testFirestoreConnection } from '../firebase';
 import { UserProfile, UserRole, UserStatus, UserPermissions, AuthContextType } from '../types/auth';
+import { socService } from '../services/socService';
 
 // Re-exportar tipos para compatibilidad entre módulos
 export type { UserProfile, UserRole, UserStatus, UserPermissions };
@@ -22,6 +23,8 @@ const AuthContext = createContext<AuthContextType>({
   isActive: false,
   isApprover: false,
   isDemoUser: false,
+  authError: null,
+  clearAuthError: () => {},
   signInWithGoogle: async () => {},
   signInAsDemo: async () => {},
   signOut: async () => {},
@@ -32,6 +35,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isDemoUser, setIsDemoUser] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const clearAuthError = () => setAuthError(null);
 
   useEffect(() => {
     // Comprobar conectividad inicial con Firestore
@@ -170,6 +176,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
       } catch (err) {
         console.error('Error al inicializar el perfil de usuario:', err);
+        // Fallback resiliente: asegura que el usuario y especialmente el Administrador nunca queden sin perfil
+        const fallbackProfile: UserProfile = {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || (isConfiguredAdmin ? 'Sr. Smith (Administrador)' : 'Alumno Al-Hadiqa'),
+          photoURL: user.photoURL || '',
+          role: isConfiguredAdmin ? 'admin' : 'alumno',
+          status: isConfiguredAdmin ? 'active' : 'pending',
+          permissions: {
+            canAccessClasses: isConfiguredAdmin,
+            canAccessChat: isConfiguredAdmin,
+            canAccessLibrary: isConfiguredAdmin,
+            canAccessCapital: isConfiguredAdmin,
+            canDownload: isConfiguredAdmin,
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setProfile(fallbackProfile);
         setLoading(false);
       }
     });
@@ -184,9 +209,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async () => {
+    setAuthError(null);
+    const clientIp = await socService.resolveClientIp();
+    const remainingMs = socService.getQuarantineRemainingMs(clientIp);
+
+    if (remainingMs !== null) {
+      const minsLeft = remainingMs === Infinity ? 'permanente' : `${Math.max(1, Math.ceil(remainingMs / 60000))} min`;
+      const blockMsg = `Acceso bloqueado temporalmente (${minsLeft}) por SOC EXCAISRES debido a múltiples intentos fallidos desde tu IP (${clientIp}).`;
+      setAuthError(blockMsg);
+      await socService.logFirebaseAuthAttempt({
+        sourceIp: clientIp,
+        errorCode: 'soc/quarantine-active',
+        errorMessage: blockMsg,
+        outcome: 'BLOCKED',
+      });
+      throw new Error(blockMsg);
+    }
+
     try {
-      await loginWithGoogle();
-    } catch (err) {
+      const cred = await loginWithGoogle();
+      await socService.logFirebaseAuthAttempt({
+        email: cred?.user?.email || undefined,
+        sourceIp: clientIp,
+        errorCode: 'auth/ok',
+        errorMessage: 'Autenticación Google OAuth exitosa',
+        outcome: 'SUCCESS',
+      });
+    } catch (err: unknown) {
+      const authErr = err as Error & { code?: string; email?: string };
+      const msg = authErr instanceof Error ? authErr.message : 'Error al autenticar con Google.';
+      setAuthError(msg);
+      // Registrar fallo en logs de autenticación Firebase para monitoreo continuo de SOC EXCAISRES
+      await socService.logFirebaseAuthAttempt({
+        email: authErr?.email,
+        sourceIp: clientIp,
+        errorCode: authErr?.code || 'auth/popup-error',
+        errorMessage: msg,
+        outcome: 'FAILED',
+      });
+      socService.registerAuthFailure(clientIp);
       console.warn('Error al iniciar sesión con Google:', err);
       throw err;
     }
@@ -324,6 +385,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isActive,
         isApprover,
         isDemoUser,
+        authError,
+        clearAuthError,
         signInWithGoogle: signIn,
         signInAsDemo,
         signOut: logOut,

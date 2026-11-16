@@ -3,9 +3,14 @@ import { doc, onSnapshot, setDoc, addDoc, collection } from 'firebase/firestore'
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { parseStreamEmbedUrl } from '../utils/streamUrlParser';
+import { verifyStreamUrlIntegrity } from '../services/streamCryptoService';
+import { socService } from '../services/socService';
 
 export const OFFICIAL_CHANNEL_URL = 'https://www.youtube.com/@AL-HADIQAINVEST';
 export const OFFICIAL_CHANNEL_NAME = '@AL-HADIQAINVEST';
+export const OFFICIAL_TIKTOK_URL = 'https://www.tiktok.com/@alhadiqa.capital';
+export const OFFICIAL_TIKTOK_LIVE_URL = 'https://www.tiktok.com/@alhadiqa.capital/live';
+export const OFFICIAL_TIKTOK_NAME = '@alhadiqa.capital';
 
 export interface LiveBroadcastState {
   id: string;
@@ -154,7 +159,10 @@ export const StreamingHubSection: React.FC = () => {
     },
   ]);
 
-  // Sincronización en tiempo real desde Firestore
+  const [tiktokIsLive, setTiktokIsLive] = useState<boolean>(false);
+  const [tiktokStatusNote, setTiktokStatusNote] = useState<string>('Monitoreo automático activo');
+
+  // Sincronización en tiempo real desde Firestore (YouTube y TikTok)
   useEffect(() => {
     const unsub = onSnapshot(
       doc(db, 'live_broadcasts', 'current'),
@@ -184,11 +192,43 @@ export const StreamingHubSection: React.FC = () => {
       }
     );
 
-    return () => unsub();
+    const unsubTikTok = onSnapshot(
+      doc(db, 'live_broadcasts', 'tiktok_alhadiqa_capital'),
+      (snap) => {
+        if (snap.exists()) {
+          const tData = snap.data() as { isLive?: boolean; status?: string; title?: string };
+          if (tData.isLive || tData.status === 'en_vivo') {
+            setTiktokIsLive(true);
+            setTiktokStatusNote(tData.title || 'Transmitiendo en directo en TikTok');
+          } else {
+            setTiktokIsLive(false);
+          }
+        }
+      },
+      () => {}
+    );
+
+    fetch('/api/channels/tiktok/status')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { isLive?: boolean; liveTitle?: string; latestVideoTitle?: string } | null) => {
+        if (!d) return;
+        if (d.isLive) {
+          setTiktokIsLive(true);
+          setTiktokStatusNote(d.liveTitle || 'Live detectado en TikTok @alhadiqa.capital');
+        } else if (d.latestVideoTitle) {
+          setTiktokStatusNote(`Último: ${d.latestVideoTitle.slice(0, 50)}`);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      unsub();
+      unsubTikTok();
+    };
   }, [isAdmin]);
 
   // Parse embed URL
-  const { embedUrl } = parseStreamEmbedUrl(activeUrl);
+  const { embedUrl, source: activeStreamSource, isChannelLive: isTikTokChannelLive } = parseStreamEmbedUrl(activeUrl);
 
   // ADMIN: Iniciar / Actualizar Transmisión y Notificar a los Alumnos
   const handleAdminPublishBroadcast = async (customStatus?: LiveBroadcastState['status']) => {
@@ -196,7 +236,16 @@ export const StreamingHubSection: React.FC = () => {
     setAdminFeedback(null);
 
     const targetStatus = customStatus || adminStatus;
-    const finalUrl = adminManualLink.trim() || OFFICIAL_CHANNEL_URL;
+    const rawUrl = adminManualLink.trim() || OFFICIAL_CHANNEL_URL;
+    const urlCheck = verifyStreamUrlIntegrity(rawUrl);
+
+    if (!urlCheck.valid) {
+      setAdminFeedback(`🛡️ Bloqueado por Seguridad: ${urlCheck.reason}`);
+      setIsSaving(false);
+      return;
+    }
+
+    const finalUrl = urlCheck.sanitizedUrl;
     const finalTitle = adminTitle.trim() || 'Transmisión Oficial en Vivo @AL-HADIQAINVEST';
     const finalDesc =
       adminDesc.trim() ||
@@ -257,6 +306,72 @@ export const StreamingHubSection: React.FC = () => {
     }
   };
 
+  // ADMIN: Notificar emisión o nuevo contenido en TikTok (@alhadiqa.capital)
+  const handleNotifyTikTokBroadcast = async (mode: 'en_vivo' | 'nuevo_contenido') => {
+    setIsSaving(true);
+    setAdminFeedback(null);
+    const nowIso = new Date().toISOString();
+    const targetUrl =
+      adminManualLink.includes('tiktok.com')
+        ? adminManualLink.trim()
+        : mode === 'en_vivo'
+        ? OFFICIAL_TIKTOK_LIVE_URL
+        : OFFICIAL_TIKTOK_URL;
+    const customTitle =
+      adminTitle.trim() ||
+      (mode === 'en_vivo'
+        ? `Live en Directo desde TikTok ${OFFICIAL_TIKTOK_NAME}`
+        : `Nuevo Contenido Financiero en TikTok ${OFFICIAL_TIKTOK_NAME}`);
+
+    try {
+      await setDoc(
+        doc(db, 'live_broadcasts', 'tiktok_alhadiqa_capital'),
+        {
+          id: 'tiktok_alhadiqa_capital',
+          title: customTitle,
+          description:
+            adminDesc.trim() ||
+            `Transmisión y contenido oficial en TikTok ${OFFICIAL_TIKTOK_NAME}. Toca para ver en directo.`,
+          youtubeUrl: targetUrl,
+          channelUrl: OFFICIAL_TIKTOK_URL,
+          status: mode === 'en_vivo' ? 'en_vivo' : 'standby',
+          isLive: mode === 'en_vivo',
+          instructor: 'Sr.smith (Carlos Smith Zambrano)',
+          category: adminCategory || 'Al-Hadiqa Capital',
+          updatedAt: nowIso,
+          lastNotificationSent: nowIso,
+        },
+        { merge: true }
+      );
+
+      await addDoc(collection(db, 'notifications'), {
+        title:
+          mode === 'en_vivo'
+            ? `🔴 ¡EN VIVO en TikTok ${OFFICIAL_TIKTOK_NAME}! ${customTitle}`
+            : `🎵 Nuevo contenido en TikTok ${OFFICIAL_TIKTOK_NAME}: ${customTitle}`,
+        message: `El canal oficial de TikTok (${OFFICIAL_TIKTOK_URL}) ha emitido nuevo contenido. Haz clic para verlo en directo.`,
+        type: 'class',
+        category: mode === 'en_vivo' ? 'clase' : 'contenido',
+        targetRole: 'all',
+        createdAt: nowIso,
+        actionUrl: targetUrl,
+        actionLabel: 'Abrir en TikTok',
+        link: targetUrl,
+      });
+
+      playChimeAlert();
+      setAdminFeedback(
+        `✅ Notificación de TikTok (${OFFICIAL_TIKTOK_NAME}) emitida en toda la web y campanita.`
+      );
+      setTimeout(() => setAdminFeedback(null), 6000);
+    } catch (err) {
+      console.error('Error notificando TikTok:', err);
+      setAdminFeedback('❌ No se pudo emitir la notificación de TikTok en Firestore.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // ADMIN: Enviar alerta manual rápida a los alumnos
   const handleSendQuickAlert = async () => {
     try {
@@ -277,15 +392,30 @@ export const StreamingHubSection: React.FC = () => {
     }
   };
 
-  // STUDENT: Enviar pregunta en vivo al instructor
+  // STUDENT: Enviar pregunta en vivo al instructor (con inspección heurística SOC EXCAISRES anti-XSS/SQLi)
   const handleStudentSubmitQuestion = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentQuestion.trim() || !currentUser) return;
+    const cleaned = studentQuestion.trim();
+    if (!cleaned || !currentUser) return;
+
+    const threat = socService.inspectPayload(cleaned);
+    if (threat.isThreat && threat.vector) {
+      socService.detectAndMitigate({
+        attackVector: threat.vector,
+        severity: 'HIGH',
+        targetEndpoint: '/streaming/live-qa',
+        payloadSample: threat.sample || cleaned.slice(0, 120),
+        details: 'Payload malicioso neutralizado en preguntas en vivo de transmisión.',
+      });
+      setStudentFeedback('🛡️ Mensaje bloqueado por SOC EXCAISRES por contener sintaxis no permitida.');
+      setTimeout(() => setStudentFeedback(null), 5000);
+      return;
+    }
 
     const newQ = {
       id: 'q_' + Date.now(),
       author: `${currentUser.displayName || 'Alumno'}`,
-      text: studentQuestion.trim(),
+      text: cleaned.slice(0, 400),
       time: 'Justo ahora',
     };
 
@@ -323,8 +453,21 @@ export const StreamingHubSection: React.FC = () => {
               className="streaming-channel-badge"
               title="Abrir canal oficial en YouTube"
             >
-              <span>Canal Oficial:</span>
+              <span>YouTube:</span>
               <strong style={{ color: 'var(--gold)' }}>{OFFICIAL_CHANNEL_NAME}</strong>
+              <span aria-hidden="true">↗</span>
+            </a>
+
+            <a
+              href={OFFICIAL_TIKTOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="streaming-channel-badge"
+              title="Abrir canal oficial de TikTok @alhadiqa.capital"
+              style={{ borderColor: tiktokIsLive ? 'rgba(244, 63, 94, 0.7)' : 'rgba(16, 185, 129, 0.4)' }}
+            >
+              <span>{tiktokIsLive ? '🔴 LIVE TikTok:' : '🎵 TikTok:'}</span>
+              <strong style={{ color: '#6ee7b7' }}>{OFFICIAL_TIKTOK_NAME}</strong>
               <span aria-hidden="true">↗</span>
             </a>
           </div>
@@ -376,7 +519,7 @@ export const StreamingHubSection: React.FC = () => {
                   <input
                     type="text"
                     className="admin-text-input"
-                    placeholder="Ej: https://www.youtube.com/live/dQw4w9WgXcQ o https://youtu.be/..."
+                    placeholder="Ej: https://www.youtube.com/live/... o https://www.tiktok.com/@alhadiqa.capital"
                     value={adminManualLink}
                     onChange={(e) => setAdminManualLink(e.target.value)}
                   />
@@ -384,13 +527,21 @@ export const StreamingHubSection: React.FC = () => {
                     type="button"
                     className="btn btn--ghost admin-quick-btn"
                     onClick={() => setAdminManualLink(OFFICIAL_CHANNEL_URL)}
-                    title="Usar link oficial del canal"
+                    title="Usar canal oficial de YouTube"
                   >
-                    Usar Canal
+                    YouTube
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--ghost admin-quick-btn"
+                    onClick={() => setAdminManualLink(OFFICIAL_TIKTOK_URL)}
+                    title="Usar canal oficial de TikTok @alhadiqa.capital"
+                  >
+                    TikTok
                   </button>
                 </div>
                 <span className="admin-input-helper">
-                  Canal predeterminado: <code>{OFFICIAL_CHANNEL_URL}</code>
+                  Canales oficiales: <code>{OFFICIAL_CHANNEL_NAME}</code> (YouTube) · <code>{OFFICIAL_TIKTOK_NAME}</code> (TikTok)
                 </span>
               </div>
 
@@ -501,6 +652,26 @@ export const StreamingHubSection: React.FC = () => {
 
               <button
                 type="button"
+                className="btn btn--emerald admin-alert-btn"
+                onClick={() => handleNotifyTikTokBroadcast('en_vivo')}
+                disabled={isSaving}
+                title="Notificar en la web que @alhadiqa.capital está transmitiendo en vivo en TikTok"
+              >
+                <span>🎵 Notificar Live TikTok @alhadiqa.capital</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn btn--ghost admin-alert-btn"
+                onClick={() => handleNotifyTikTokBroadcast('nuevo_contenido')}
+                disabled={isSaving}
+                title="Notificar en la web un nuevo video/contenido de @alhadiqa.capital en TikTok"
+              >
+                <span>📢 Avisar Nuevo Video TikTok</span>
+              </button>
+
+              <button
+                type="button"
                 className="btn btn--ghost admin-finish-btn"
                 onClick={() => handleAdminPublishBroadcast('finalizada')}
                 disabled={isSaving}
@@ -521,11 +692,32 @@ export const StreamingHubSection: React.FC = () => {
               /* ALUMNO CONECTADO: REPRODUCTOR ACTIVO */
               <div className="streaming-video-container">
                 <div className="streaming-aspect-ratio-box">
-                  {embedUrl ? (
+                  {activeStreamSource === 'tiktok' && isTikTokChannelLive ? (
+                    <div className="streaming-empty-fallback" style={{ padding: '2rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '3rem' }}>🎵</span>
+                      <h4 style={{ color: '#fff', fontSize: '1.15rem', margin: '0.5rem 0' }}>
+                        Canal Oficial TikTok: {OFFICIAL_TIKTOK_NAME}
+                      </h4>
+                      <p style={{ maxWidth: '460px', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        {tiktokStatusNote}. Por políticas de reproducción directa de TikTok LIVE, abre la señal
+                        oficial en directo con un clic:
+                      </p>
+                      <a
+                        href={activeUrl.includes('tiktok.com') ? activeUrl : OFFICIAL_TIKTOK_LIVE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn--emerald"
+                      >
+                        <span>🔴 Ver Transmisión en Vivo en TikTok ({OFFICIAL_TIKTOK_NAME}) ↗</span>
+                      </a>
+                    </div>
+                  ) : embedUrl ? (
                     <iframe
                       src={embedUrl}
                       title={activeTitle}
                       className="streaming-iframe"
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
                     ></iframe>
@@ -640,15 +832,23 @@ export const StreamingHubSection: React.FC = () => {
                   <button
                     type="button"
                     className={`btn btn--ghost student-notif-btn ${studentNotifsActive ? 'is-active' : ''}`}
-                    onClick={() => {
-                      setStudentNotifsActive(!studentNotifsActive);
+                    onClick={async () => {
+                      const next = !studentNotifsActive;
+                      setStudentNotifsActive(next);
+                      if (next && 'Notification' in window && window.Notification.permission === 'default') {
+                        try {
+                          await window.Notification.requestPermission();
+                        } catch {
+                          // ignore permission denial
+                        }
+                      }
                       playChimeAlert();
                       setStudentFeedback(
-                        !studentNotifsActive
-                          ? '🔔 Notificaciones activadas: Recibirás una alerta en tu cuenta al iniciar cada directo.'
+                        next
+                          ? '🔔 Alertas activadas: Recibirás avisos en la web cuando transmitan @AL-HADIQAINVEST (YouTube) o @alhadiqa.capital (TikTok).'
                           : '🔕 Notificaciones de transmisión silenciadas.'
                       );
-                      setTimeout(() => setStudentFeedback(null), 4000);
+                      setTimeout(() => setStudentFeedback(null), 5000);
                     }}
                   >
                     <span>{studentNotifsActive ? '🔔 Notificaciones Activadas' : '🔕 Activar Alertas'}</span>
@@ -746,6 +946,49 @@ export const StreamingHubSection: React.FC = () => {
                 <span>Visitar Canal Oficial de YouTube</span>
                 <span aria-hidden="true">↗</span>
               </a>
+            </div>
+
+            {/* Tarjeta de Acceso Directo al Canal Oficial de TikTok (@alhadiqa.capital) */}
+            <div className="youtube-channel-highlight-card" style={{ marginTop: '1rem', borderColor: tiktokIsLive ? 'rgba(244, 63, 94, 0.65)' : 'rgba(16, 185, 129, 0.35)' }}>
+              <div className="yt-card-header">
+                <span className="yt-icon-red" style={{ background: 'linear-gradient(135deg, #0f172a, #10b981)', color: '#fff' }}>🎵</span>
+                <div>
+                  <div className="yt-channel-name">{OFFICIAL_TIKTOK_NAME}</div>
+                  <div className="yt-channel-sub">
+                    {tiktokIsLive ? '🔴 Transmitiendo en Vivo en TikTok' : 'Canal Oficial TikTok · Monitoreo Activo'}
+                  </div>
+                </div>
+              </div>
+              <p className="yt-channel-text">
+                Sigue nuestro TikTok oficial para recibir notificaciones instantáneas en esta web cada vez que
+                publiquemos análisis rápidos o iniciemos transmisiones en vivo.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <a
+                  href={OFFICIAL_TIKTOK_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn--emerald yt-subscribe-btn"
+                >
+                  <span>Visitar TikTok {OFFICIAL_TIKTOK_NAME}</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+                <button
+                  type="button"
+                  className="btn btn--ghost yt-subscribe-btn"
+                  onClick={async () => {
+                    if ('Notification' in window && window.Notification.permission !== 'granted') {
+                      await window.Notification.requestPermission().catch(() => {});
+                    }
+                    setStudentNotifsActive(true);
+                    playChimeAlert();
+                    setStudentFeedback('🔔 Alertas de TikTok @alhadiqa.capital activadas en tiempo real.');
+                    setTimeout(() => setStudentFeedback(null), 4000);
+                  }}
+                >
+                  <span>🔔 Activar Alertas de TikTok en Web</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
