@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc, addDoc, collection } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { parseStreamEmbedUrl } from '../utils/streamUrlParser';
 import { verifyStreamUrlIntegrity } from '../services/streamCryptoService';
@@ -182,9 +182,9 @@ export const StreamingHubSection: React.FC = () => {
             setAdminCategory(data.category || 'SMC Institucional');
             setAdminStatus(data.status || 'en_vivo');
           }
-        } else if (isAdmin) {
-          // Crear documento por defecto si no existe
-          setDoc(doc(db, 'live_broadcasts', 'current'), DEFAULT_BROADCAST).catch(console.error);
+        } else if (isAdmin && auth.currentUser) {
+          // Crear documento por defecto si no existe y el administrador tiene sesión Firebase real
+          setDoc(doc(db, 'live_broadcasts', 'current'), DEFAULT_BROADCAST).catch(() => {});
         }
       },
       (err) => {

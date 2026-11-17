@@ -172,25 +172,35 @@ class SocExcaisresEngine {
     } catch (_) {}
   }
 
+  private inFlightIpPromise: Promise<string> | null = null;
+
   /**
-   * Resuelve la IP del cliente desde /api/client-ip con fallback seguro
+   * Resuelve la IP del cliente desde /api/client-ip con fallback seguro y deduplicación
    */
   public async resolveClientIp(): Promise<string> {
     if (this.cachedClientIp) return this.cachedClientIp;
-    try {
-      const res = await fetch('/api/client-ip');
-      if (res.ok) {
-        const data = (await res.json()) as { ip?: string };
-        if (data?.ip) {
-          this.cachedClientIp = data.ip;
-          return data.ip;
+    if (this.inFlightIpPromise) return this.inFlightIpPromise;
+
+    this.inFlightIpPromise = (async () => {
+      try {
+        const res = await fetch('/api/client-ip');
+        if (res.ok) {
+          const data = (await res.json()) as { ip?: string };
+          if (data?.ip) {
+            this.cachedClientIp = data.ip;
+            return data.ip;
+          }
         }
+      } catch (_) {
+        // Fallback en modo offline
       }
-    } catch (_) {
-      // Fallback en modo offline
-    }
-    this.cachedClientIp = '192.168.1.105';
-    return this.cachedClientIp;
+      this.cachedClientIp = '192.168.1.105';
+      return this.cachedClientIp;
+    })().finally(() => {
+      this.inFlightIpPromise = null;
+    });
+
+    return this.inFlightIpPromise;
   }
 
   /**

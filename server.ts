@@ -22,6 +22,7 @@ import { observability } from './server/observabilityEngine';
 import { backupService } from './server/backupService';
 import {
   createStrictIpRateLimiter,
+  extractNormalizedClientIp,
   getRateLimiterStats,
   pruneExpiredRateLimitEntries,
 } from './server/rateLimiter';
@@ -50,7 +51,7 @@ app.set('trust proxy', 1);
 
 // Compresión gzip/deflate optimizada para reducir tiempo de carga en móvil y escritorio
 app.use(compression({
-  threshold: 512,
+  threshold: 256,
   level: 6,
   filter: (req, res) => {
     if (req.headers['x-no-compression']) return false;
@@ -69,24 +70,24 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 // Rate Limiting estricto por IP + Validación OWASP Top 10 en toda la superficie /api
 app.use(
   '/api',
-  createStrictIpRateLimiter({ bucketName: 'global-api', windowMs: 60_000, maxRequests: 120 }),
+  createStrictIpRateLimiter({ bucketName: 'global-api', windowMs: 60_000, maxRequests: 300 }),
   owaspInputGuardMiddleware
 );
 app.use(
   '/api/v1/auth',
-  createStrictIpRateLimiter({ bucketName: 'auth-strict', windowMs: 60_000, maxRequests: 20 })
+  createStrictIpRateLimiter({ bucketName: 'auth-strict', windowMs: 60_000, maxRequests: 30 })
 );
 app.use(
   '/api/mentor',
-  createStrictIpRateLimiter({ bucketName: 'ai-mentor', windowMs: 60_000, maxRequests: 30 })
+  createStrictIpRateLimiter({ bucketName: 'ai-mentor', windowMs: 60_000, maxRequests: 60 })
 );
 app.use(
   '/api/gemini',
-  createStrictIpRateLimiter({ bucketName: 'ai-mentor', windowMs: 60_000, maxRequests: 30 })
+  createStrictIpRateLimiter({ bucketName: 'ai-mentor', windowMs: 60_000, maxRequests: 60 })
 );
 app.use(
   '/api/stream',
-  createStrictIpRateLimiter({ bucketName: 'stream-token', windowMs: 60_000, maxRequests: 30 })
+  createStrictIpRateLimiter({ bucketName: 'stream-token', windowMs: 60_000, maxRequests: 60 })
 );
 
 // Middleware para forzar HTTPS, aumentar nivel de cifrado TLS/CSP y proteger transmisiones contra ciberataques
@@ -135,6 +136,12 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Caché rápida para imágenes y recursos estáticos públicos (después de cabeceras OWASP)
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/assets', express.static(path.join(process.cwd(), 'public', 'assets'), { maxAge: '7d', etag: true, fallthrough: true }));
+  app.use('/libros', express.static(path.join(process.cwd(), 'public', 'libros'), { maxAge: '7d', etag: true, fallthrough: true }));
+}
 
 // Rutas explícitas para SEO, Sitemap, Robots y Favicon
 app.get('/robots.txt', (_req, res) => {
@@ -371,17 +378,9 @@ app.post('/api/v1/backups/verify-restore', validateBody(verifyRestoreSchema, tru
   res.status(result.status === 'VERIFIED_CLEAN' ? 200 : 500).json(result);
 });
 
-// Resolución de IP de cliente para telemetría de autenticación en SOC EXCAISRES
+// Resolución de IP de cliente respetando trust proxy en Express (sin confiar ciegamente en X-Forwarded-For)
 app.get('/api/client-ip', (req, res) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  const rawIp = Array.isArray(forwarded)
-    ? forwarded[0]
-    : typeof forwarded === 'string'
-    ? forwarded.split(',')[0].trim()
-    : req.ip || req.socket?.remoteAddress || '127.0.0.1';
-
-  const cleanIp = rawIp.replace(/^::ffff:/, '');
-  res.json({ ip: cleanIp || '127.0.0.1' });
+  res.json({ ip: extractNormalizedClientIp(req) });
 });
 
 // Monitor en tiempo real del canal oficial de TikTok (@alhadiqa.capital)
@@ -1025,7 +1024,7 @@ async function setupServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);

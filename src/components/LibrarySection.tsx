@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { LibraryResourceItem, LibraryCategory } from '../types';
 import { OFFICIAL_SEED_BOOKS } from '../data/seedLibrary';
@@ -29,17 +29,21 @@ export const LibrarySection: React.FC = () => {
     const unsub = onSnapshot(
       collection(db, 'library_resources'),
       async (snapshot) => {
-        if (snapshot.empty && isAdmin) {
-          // Auto-seed with the comprehensive trading curriculum
-          for (const item of OFFICIAL_SEED_BOOKS) {
-            const docRef = doc(collection(db, 'library_resources'));
-            await setDoc(docRef, {
-              ...item,
-              id: docRef.id,
-              createdAt: serverTimestamp(),
-            });
+        if (snapshot.empty && isAdmin && auth.currentUser) {
+          try {
+            // Auto-seed with the comprehensive trading curriculum
+            for (const item of OFFICIAL_SEED_BOOKS) {
+              const docRef = doc(collection(db, 'library_resources'));
+              await setDoc(docRef, {
+                ...item,
+                id: docRef.id,
+                createdAt: serverTimestamp(),
+              });
+            }
+            return;
+          } catch (seedErr) {
+            console.warn('Library auto-seed fallback to local catalog:', seedErr);
           }
-          return;
         }
 
         const list: LibraryResourceItem[] = [];

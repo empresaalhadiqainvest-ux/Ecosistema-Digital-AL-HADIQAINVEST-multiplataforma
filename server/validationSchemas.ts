@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
-import { z, type ZodSchema } from 'zod';
+import { z } from 'zod';
+export { extractNormalizedClientIp } from './rateLimiter';
 
 /**
  * Esquemas estrictos Zod para validación Zero-Trust en todas las rutas API
@@ -59,11 +60,18 @@ export const mentorChatSchema = z
       .array(
         z.object({
           role: z.enum(['user', 'assistant', 'model', 'system']),
-          content: z.string().trim().min(1).max(8000),
+          content: z.string().trim().max(8000),
         })
       )
-      .min(1, 'Se requiere al menos un mensaje')
-      .max(40, 'Historial de conversación excede el máximo permitido'),
+      .transform((msgs) => msgs.filter((m) => m.content.length > 0))
+      .refine((msgs) => msgs.length >= 1, {
+        message: 'Se requiere al menos un mensaje con contenido válido',
+      })
+      .refine((msgs) => msgs.length <= 40, {
+        message: 'Historial de conversación excede el máximo permitido',
+      }),
+    model: z.string().trim().max(80).optional(),
+    temperature: z.number().min(0).max(2).optional(),
     systemInstruction: z.string().trim().max(4000).optional(),
   })
   .strict();
@@ -75,7 +83,7 @@ export const streamSecurityTokenSchema = z
       .trim()
       .min(1, 'classId es obligatorio')
       .max(120)
-      .regex(/^[a-zA-Z0-9_-]+$/, 'Formato de classId inválido'),
+      .regex(/^[a-zA-Z0-9_.:@-]+$/, 'Formato de classId inválido'),
     hostUid: z.string().trim().max(128).optional(),
     keyFingerprint: z.string().trim().max(128).optional(),
   })
@@ -100,9 +108,12 @@ export const streamVerifyTokenSchema = z
 /**
  * Middleware genérico de validación Zod que sustituye req.body por datos saneados y tipados
  */
-export function validateBody<T>(schema: ZodSchema<T>, allowEmptyBody = false) {
+export function validateBody<T>(schema: z.ZodType<T>, allowEmptyBody = false) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const rawBody = req.body === undefined || req.body === null ? (allowEmptyBody ? {} : req.body) : req.body;
+    const rawBody =
+      req.body === undefined || req.body === null
+        ? (allowEmptyBody ? {} : undefined)
+        : req.body;
     const parsed = schema.safeParse(rawBody);
 
     if (!parsed.success) {

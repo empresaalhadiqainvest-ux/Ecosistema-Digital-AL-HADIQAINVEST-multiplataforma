@@ -77,11 +77,15 @@ export const LiveSessionChat: React.FC<LiveSessionChatProps> = ({
     );
 
     // Subscribe to system settings for global chat mute
-    const unsubSettings = onSnapshot(doc(db, 'system_settings', 'chat'), (docSnap) => {
-      if (docSnap.exists()) {
-        setIsGlobalMuted(!!docSnap.data().isGlobalMuted);
-      }
-    });
+    const unsubSettings = onSnapshot(
+      doc(db, 'system_settings', 'chat'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setIsGlobalMuted(!!docSnap.data().isGlobalMuted);
+        }
+      },
+      () => {}
+    );
 
     return () => {
       unsubMessages();

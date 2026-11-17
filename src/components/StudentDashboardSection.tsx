@@ -33,7 +33,7 @@ import {
   Sparkles,
   RefreshCw,
 } from 'lucide-react';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import {
   deliverDailyPersonalDevNotification,
@@ -373,7 +373,8 @@ export const StudentDashboardSection: React.FC = () => {
 
   // 4. Listen to student's `download_logs` strictly obeying firestore.rules
   useEffect(() => {
-    if (!currentUser?.uid || !isActiveStudent) {
+    const firebaseUid = auth.currentUser?.uid;
+    if (!currentUser?.uid || !firebaseUid || !isActiveStudent) {
       setDownloadLogs([]);
       setLogsLoading(false);
       return;

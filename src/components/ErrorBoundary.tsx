@@ -21,10 +21,38 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Al-Hadiqa Invest - ErrorBoundary caught an error:', error, errorInfo);
+
+    const msg = error?.message || '';
+    const isChunkOrModuleError =
+      msg.includes('dynamically imported module') ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('Loading chunk') ||
+      msg.includes('ChunkLoadError');
+
+    if (isChunkOrModuleError && typeof window !== 'undefined') {
+      const guardKey = 'alhadiqa_chunk_auto_reload_ts';
+      const last = Number(sessionStorage.getItem(guardKey) || '0');
+      if (Date.now() - last > 15_000) {
+        sessionStorage.setItem(guardKey, String(Date.now()));
+        this.clearCachesAndReload();
+      }
+    }
   }
 
+  private clearCachesAndReload = () => {
+    const reload = () => window.location.reload();
+    if ('caches' in window) {
+      caches
+        .keys()
+        .then((names) => Promise.all(names.map((n) => caches.delete(n))))
+        .finally(reload);
+    } else {
+      reload();
+    }
+  };
+
   private handleReload = () => {
-    window.location.reload();
+    this.clearCachesAndReload();
   };
 
   public render() {

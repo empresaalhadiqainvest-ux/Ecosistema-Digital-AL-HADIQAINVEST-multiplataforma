@@ -52,7 +52,20 @@ function dispatchBrowserNotification(alert: LiveAlertBannerItem) {
     });
     n.onclick = () => {
       window.focus();
-      window.open(alert.url, '_blank', 'noopener,noreferrer');
+      try {
+        const parsed = new URL(alert.url, window.location.origin);
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+          const link = document.createElement('a');
+          link.href = parsed.toString();
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch {
+        // ignore invalid notification URL
+      }
     };
   } catch {
     // fallback silently on restricted webviews

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, onSnapshot, query, orderBy, limit, doc, updateDoc, arrayUnion, where } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { AppNotificationItem, EmailLogItem } from '../types/notifications';
 import { EmailViewerModal } from './EmailViewerModal';
@@ -14,7 +14,7 @@ import {
 } from '../services/dailyPersonalDevService';
 
 export const NotificationCenter: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'emails'>('notifications');
   const [notifications, setNotifications] = useState<AppNotificationItem[]>([]);
@@ -149,11 +149,18 @@ export const NotificationCenter: React.FC = () => {
     return () => window.removeEventListener('al_hadiqa_daily_dev_notification', handleDailyDevEvent);
   }, []);
 
-  // Listen to transactional email logs for this user
+  // Listen to transactional email logs for this user (respecting firestore.rules)
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    const firebaseUid = auth.currentUser?.uid;
+    if (!currentUser?.uid || !firebaseUid) {
+      setEmailLogs([]);
+      return;
+    }
 
-    const q = query(collection(db, 'email_logs'), orderBy('createdAt', 'desc'), limit(25));
+    const q = isAdmin
+      ? query(collection(db, 'email_logs'), orderBy('createdAt', 'desc'), limit(25))
+      : query(collection(db, 'email_logs'), where('userId', '==', firebaseUid), limit(25));
+
     const unsub = onSnapshot(
       q,
       (snapshot) => {
@@ -164,6 +171,17 @@ export const NotificationCenter: React.FC = () => {
             items.push({ id: d.id, ...data });
           }
         });
+        items.sort((a, b) => {
+          const getMs = (v: unknown) => {
+            if (!v) return 0;
+            if (typeof v === 'object' && v !== null && 'toMillis' in v) {
+              return (v as { toMillis: () => number }).toMillis();
+            }
+            const parsed = new Date(String(v)).getTime();
+            return Number.isNaN(parsed) ? 0 : parsed;
+          };
+          return getMs(b.createdAt) - getMs(a.createdAt);
+        });
         setEmailLogs(items);
       },
       (err) => {
@@ -172,7 +190,7 @@ export const NotificationCenter: React.FC = () => {
     );
 
     return () => unsub();
-  }, [currentUser]);
+  }, [currentUser, isAdmin]);
 
   // Calculate unread count
   const unreadNotifications = notifications.filter((n) => {

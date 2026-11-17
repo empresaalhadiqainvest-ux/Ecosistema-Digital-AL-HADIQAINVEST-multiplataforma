@@ -56,7 +56,13 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/assets\/.*\.(pdf|mp4)$/],
+        navigateFallbackDenylist: [
+          /^\/api\//,
+          /^\/src\//,
+          /^\/node_modules\//,
+          /^\/@/,
+          /^\/assets\/.*\.(pdf|mp4)$/,
+        ],
         runtimeCaching: [
           {
             urlPattern: /^\/api\/.*/i,
@@ -90,9 +96,7 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: true,
-        type: 'module',
-        navigateFallback: 'index.html',
+        enabled: false,
       },
     }),
   ],
@@ -106,19 +110,20 @@ export default defineConfig({
       'react-dom/client',
       'react/jsx-runtime',
       'react/jsx-dev-runtime',
-      'three',
-      'recharts',
       'lucide-react',
       'firebase/app',
       'firebase/auth',
       'firebase/firestore',
       'firebase/storage',
+      'three',
+      'recharts',
       'd3',
     ],
   },
   server: {
     host: '0.0.0.0',
     port: 3000,
+    hmr: false,
     headers: {
       'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
       'X-Content-Type-Options': 'nosniff',
@@ -138,19 +143,34 @@ export default defineConfig({
       'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=()',
     },
   },
+  esbuild: {
+    drop: ['debugger'],
+    legalComments: 'none',
+  },
   build: {
     target: 'es2020',
     minify: 'esbuild',
+    cssMinify: 'esbuild',
     cssCodeSplit: true,
+    modulePreload: { polyfill: false },
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-three': ['three'],
-          'vendor-charts': ['recharts', 'd3'],
-          'vendor-icons': ['lucide-react'],
-          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+        manualChunks(id) {
+          if (id.includes('commonjsHelpers')) return 'vendor-react';
+          if (!id.includes('node_modules')) return;
+          if (
+            id.includes('/node_modules/react/') ||
+            id.includes('/node_modules/react-dom/') ||
+            id.includes('/node_modules/scheduler/')
+          ) {
+            return 'vendor-react';
+          }
+          if (id.includes('/node_modules/three/')) return 'vendor-three';
+          if (id.includes('/node_modules/firebase/') || id.includes('/node_modules/@firebase/')) {
+            return 'vendor-firebase';
+          }
+          if (id.includes('/node_modules/lucide-react/')) return 'vendor-icons';
         },
       },
     },

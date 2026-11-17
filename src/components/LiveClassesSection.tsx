@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, setDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { parseStreamEmbedUrl } from '../utils/streamUrlParser';
 import { verifyStreamUrlIntegrity } from '../services/streamCryptoService';
@@ -95,16 +95,20 @@ export const LiveClassesSection: React.FC = () => {
     const unsub = onSnapshot(
       collection(db, 'classes'),
       async (snapshot) => {
-        if (snapshot.empty && isAdmin) {
-          for (const item of SEED_CLASSES) {
-            const classRef = doc(collection(db, 'classes'));
-            await setDoc(classRef, {
-              ...item,
-              id: classRef.id,
-              createdAt: serverTimestamp(),
-            });
+        if (snapshot.empty && isAdmin && auth.currentUser) {
+          try {
+            for (const item of SEED_CLASSES) {
+              const classRef = doc(collection(db, 'classes'));
+              await setDoc(classRef, {
+                ...item,
+                id: classRef.id,
+                createdAt: serverTimestamp(),
+              });
+            }
+            return;
+          } catch (seedErr) {
+            console.warn('Classes auto-seed fallback to base catalog:', seedErr);
           }
-          return;
         }
 
         const list: LiveClassItem[] = [];

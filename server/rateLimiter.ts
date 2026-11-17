@@ -20,14 +20,9 @@ export interface RateLimitDecision {
 const bucketStore = new Map<string, Map<string, number[]>>();
 
 export function extractNormalizedClientIp(req: Pick<Request, 'headers' | 'ip' | 'socket'>): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  const raw = Array.isArray(forwarded)
-    ? forwarded[0]
-    : typeof forwarded === 'string'
-    ? forwarded.split(',')[0].trim()
-    : req.ip || req.socket?.remoteAddress || '127.0.0.1';
-
-  return (raw || '127.0.0.1').replace(/^::ffff:/, '').slice(0, 64);
+  // Usar req.ip calculado por Express según `app.set('trust proxy', 1)` para evitar spoofing de X-Forwarded-For
+  const raw = req.ip || req.socket?.remoteAddress || '127.0.0.1';
+  return String(raw).trim().replace(/^::ffff:/, '').slice(0, 64) || '127.0.0.1';
 }
 
 /**
@@ -78,8 +73,8 @@ export function evaluateIpRateLimit(clientIp: string, rule: RateLimitRule): Rate
  */
 export function createStrictIpRateLimiter(rule: RateLimitRule) {
   return (req: Request, res: Response, next: NextFunction): void => {
-    // Excluir sondas de vida de orquestadores (Kubernetes/Cloud Run)
-    if (req.path === '/health/live' || req.path === '/health/ready') {
+    // Excluir sondas de salud de orquestadores (Kubernetes/Cloud Run)
+    if (req.path === '/health/live' || req.path === '/health/ready' || req.path === '/health/deep') {
       next();
       return;
     }

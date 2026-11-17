@@ -36,7 +36,7 @@ jobs:
             echo "ERROR: Potential hardcoded credential detected!"
             exit 1
           fi
-          if grep -rnE "(VITE|NEXT_PUBLIC)_[A-Z0-9_]*(SECRET|PRIVATE_KEY|HMAC|SIGNING|GEMINI_API_KEY|SERVICE_ROLE|PASSWORD)|NEXT_PUBLIC_" src .env.example; then
+          if grep -rnE "(VITE|NEXT_PUBLIC)_[A-Z0-9_]*(SECRET|PRIVATE_KEY|HMAC|SIGNING|GEMINI_API_KEY|SERVICE_ROLE|PASSWORD)|NEXT_PUBLIC_" src || grep -nEv '^[[:space:]]*#' .env.example | grep -E "(VITE|NEXT_PUBLIC)_[A-Z0-9_]*(SECRET|PRIVATE_KEY|HMAC|SIGNING|GEMINI_API_KEY|SERVICE_ROLE|PASSWORD)|NEXT_PUBLIC_"; then
             echo "ERROR: Privileged secret or sensitive token prefix exposed to frontend!"
             exit 1
           fi

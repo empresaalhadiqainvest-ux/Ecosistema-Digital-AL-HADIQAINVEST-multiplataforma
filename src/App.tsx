@@ -11,37 +11,38 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { LiveStreamMonitorBanner } from './components/LiveStreamMonitorBanner';
 import { DailyPersonalDevManager } from './components/DailyPersonalDevManager';
 import { trackPageView } from './utils/analytics';
+import { lazyWithRetry, SectionGuard } from './utils/lazyWithRetry';
 
-// Fondo 3D (Three.js) y secciones por debajo del pliegue cargados mediante Code Splitting
-const Background3D = React.lazy(() => import('./components/Background3D').then(m => ({ default: m.Background3D })));
-const StudentDashboardSection = React.lazy(() => import('./components/StudentDashboardSection').then(m => ({ default: m.StudentDashboardSection })));
-const FounderBiographySection = React.lazy(() => import('./components/FounderBiographySection').then(m => ({ default: m.FounderBiographySection })));
-const TradingSection = React.lazy(() => import('./components/TradingSection').then(m => ({ default: m.TradingSection })));
-const TradingPlatformClone = React.lazy(() => import('./components/TradingPlatformClone').then(m => ({ default: m.TradingPlatformClone })));
-const StreamingHubSection = React.lazy(() => import('./components/StreamingHubSection').then(m => ({ default: m.StreamingHubSection })));
-const LiveClassesSection = React.lazy(() => import('./components/LiveClassesSection').then(m => ({ default: m.LiveClassesSection })));
-const LibrarySection = React.lazy(() => import('./components/LibrarySection').then(m => ({ default: m.LibrarySection })));
-const CommunityChatSection = React.lazy(() => import('./components/CommunityChatSection').then(m => ({ default: m.CommunityChatSection })));
-const MarketNewsSection = React.lazy(() => import('./components/MarketNewsSection').then(m => ({ default: m.MarketNewsSection })));
-const SmithBusinessSection = React.lazy(() => import('./components/SmithBusinessSection').then(m => ({ default: m.SmithBusinessSection })));
-const GamingSection = React.lazy(() => import('./components/GamingSection').then(m => ({ default: m.GamingSection })));
-const EcosystemSection = React.lazy(() => import('./components/EcosystemSection').then(m => ({ default: m.EcosystemSection })));
-const CapitalSection = React.lazy(() => import('./components/CapitalSection').then(m => ({ default: m.CapitalSection })));
-const FaqSection = React.lazy(() => import('./components/FaqSection').then(m => ({ default: m.FaqSection })));
-const NewsletterSection = React.lazy(() => import('./components/NewsletterSection').then(m => ({ default: m.NewsletterSection })));
-const Footer = React.lazy(() => import('./components/Footer').then(m => ({ default: m.Footer })));
-const FloatingAssistantBot = React.lazy(() => import('./components/FloatingAssistantBot').then(m => ({ default: m.FloatingAssistantBot })));
+// Fondo 3D (Three.js) y secciones por debajo del pliegue cargados mediante Code Splitting resiliente
+const Background3D = lazyWithRetry(() => import('./components/Background3D').then(m => ({ default: m.Background3D })), 'Fondo 3D');
+const StudentDashboardSection = lazyWithRetry(() => import('./components/StudentDashboardSection').then(m => ({ default: m.StudentDashboardSection })), 'Dashboard de Estudiantes');
+const FounderBiographySection = lazyWithRetry(() => import('./components/FounderBiographySection').then(m => ({ default: m.FounderBiographySection })), 'Biografía del Fundador');
+const TradingSection = lazyWithRetry(() => import('./components/TradingSection').then(m => ({ default: m.TradingSection })), 'Ecosistema Trading');
+const TradingPlatformClone = lazyWithRetry(() => import('./components/TradingPlatformClone').then(m => ({ default: m.TradingPlatformClone })), 'Terminal Chart');
+const StreamingHubSection = lazyWithRetry(() => import('./components/StreamingHubSection').then(m => ({ default: m.StreamingHubSection })), 'Streaming Hub');
+const LiveClassesSection = lazyWithRetry(() => import('./components/LiveClassesSection').then(m => ({ default: m.LiveClassesSection })), 'Clases en Vivo');
+const LibrarySection = lazyWithRetry(() => import('./components/LibrarySection').then(m => ({ default: m.LibrarySection })), 'Biblioteca Digital');
+const CommunityChatSection = lazyWithRetry(() => import('./components/CommunityChatSection').then(m => ({ default: m.CommunityChatSection })), 'Comunidad');
+const MarketNewsSection = lazyWithRetry(() => import('./components/MarketNewsSection').then(m => ({ default: m.MarketNewsSection })), 'Noticias de Mercado');
+const SmithBusinessSection = lazyWithRetry(() => import('./components/SmithBusinessSection').then(m => ({ default: m.SmithBusinessSection })), 'Smith Business');
+const GamingSection = lazyWithRetry(() => import('./components/GamingSection').then(m => ({ default: m.GamingSection })), 'División Gaming');
+const EcosystemSection = lazyWithRetry(() => import('./components/EcosystemSection').then(m => ({ default: m.EcosystemSection })), 'Ecosistema Holding');
+const CapitalSection = lazyWithRetry(() => import('./components/CapitalSection').then(m => ({ default: m.CapitalSection })), 'Al-Hadiqa Capital');
+const FaqSection = lazyWithRetry(() => import('./components/FaqSection').then(m => ({ default: m.FaqSection })), 'Preguntas Frecuentes');
+const NewsletterSection = lazyWithRetry(() => import('./components/NewsletterSection').then(m => ({ default: m.NewsletterSection })), 'Newsletter');
+const Footer = lazyWithRetry(() => import('./components/Footer').then(m => ({ default: m.Footer })), 'Pie de página');
+const FloatingAssistantBot = lazyWithRetry(() => import('./components/FloatingAssistantBot').then(m => ({ default: m.FloatingAssistantBot })), 'Asistente Flotante');
 
 // Modales pesados cargados bajo demanda (Code Splitting / Reducción masiva del bundle inicial)
-const AdminPanelModal = React.lazy(() => import('./components/AdminPanelModal').then(m => ({ default: m.AdminPanelModal })));
-const StudentPortalModal = React.lazy(() => import('./components/StudentPortalModal').then(m => ({ default: m.StudentPortalModal })));
-const PartnerApproverModal = React.lazy(() => import('./components/PartnerApproverModal').then(m => ({ default: m.PartnerApproverModal })));
-const SecurityComplianceModal = React.lazy(() => import('./components/SecurityComplianceModal').then(m => ({ default: m.SecurityComplianceModal })));
-const OpenSourceTradingMentorModal = React.lazy(() => import('./components/OpenSourceTradingMentorModal').then(m => ({ default: m.OpenSourceTradingMentorModal })));
-const SmcCalculatorValidatorModal = React.lazy(() => import('./components/SmcCalculatorValidatorModal').then(m => ({ default: m.SmcCalculatorValidatorModal })));
-const FeedbackModal = React.lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
-const LegalTermsPrivacyModal = React.lazy(() => import('./components/LegalTermsPrivacyModal').then(m => ({ default: m.LegalTermsPrivacyModal })));
-const SocExcaisresModal = React.lazy(() => import('./components/SocExcaisresModal').then(m => ({ default: m.SocExcaisresModal })));
+const AdminPanelModal = lazyWithRetry(() => import('./components/AdminPanelModal').then(m => ({ default: m.AdminPanelModal })), 'Panel de Administración');
+const StudentPortalModal = lazyWithRetry(() => import('./components/StudentPortalModal').then(m => ({ default: m.StudentPortalModal })), 'Portal del Estudiante');
+const PartnerApproverModal = lazyWithRetry(() => import('./components/PartnerApproverModal').then(m => ({ default: m.PartnerApproverModal })), 'Panel de Aprobadores');
+const SecurityComplianceModal = lazyWithRetry(() => import('./components/SecurityComplianceModal').then(m => ({ default: m.SecurityComplianceModal })), 'Seguridad y Cumplimiento');
+const OpenSourceTradingMentorModal = lazyWithRetry(() => import('./components/OpenSourceTradingMentorModal').then(m => ({ default: m.OpenSourceTradingMentorModal })), 'Mentor de Trading');
+const SmcCalculatorValidatorModal = lazyWithRetry(() => import('./components/SmcCalculatorValidatorModal').then(m => ({ default: m.SmcCalculatorValidatorModal })), 'Calculadora SMC');
+const FeedbackModal = lazyWithRetry(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })), 'Feedback');
+const LegalTermsPrivacyModal = lazyWithRetry(() => import('./components/LegalTermsPrivacyModal').then(m => ({ default: m.LegalTermsPrivacyModal })), 'Aviso Legal');
+const SocExcaisresModal = lazyWithRetry(() => import('./components/SocExcaisresModal').then(m => ({ default: m.SocExcaisresModal })), 'SOC EXCAISRES');
 
 export const AppContent: React.FC = () => {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -66,19 +67,45 @@ export const AppContent: React.FC = () => {
 
   const isNotFound = currentPath !== '/' && currentPath !== '' && currentPath !== '/index.html';
 
-  // Diferir la inicialización de Three.js hasta que el hilo principal esté libre tras el primer renderizado
+  // Diferir Three.js hasta después del primer renderizado y carga, respetando ahorro de datos y movimiento reducido
   useEffect(() => {
     if (isNotFound || typeof window === 'undefined') return;
+
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    const isConstrainedNetwork = Boolean(
+      connection?.saveData || connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g'
+    );
+    if (prefersReducedMotion || isConstrainedNetwork) return;
+
+    const enable3D = () => setShouldRender3DBackground(true);
     const win = window as Window & {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
-    if (win.requestIdleCallback) {
-      const idleId = win.requestIdleCallback(() => setShouldRender3DBackground(true), { timeout: 600 });
-      return () => win.cancelIdleCallback?.(idleId);
+
+    let idleId: number | undefined;
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const schedule3D = () => {
+      if (win.requestIdleCallback) {
+        idleId = win.requestIdleCallback(enable3D, { timeout: 1800 });
+      } else {
+        fallbackTimer = setTimeout(enable3D, 1200);
+      }
+    };
+
+    if (document.readyState === 'complete') {
+      schedule3D();
+    } else {
+      window.addEventListener('load', schedule3D, { once: true });
     }
-    const timer = setTimeout(() => setShouldRender3DBackground(true), 200);
-    return () => clearTimeout(timer);
+
+    return () => {
+      window.removeEventListener('load', schedule3D);
+      if (idleId !== undefined) win.cancelIdleCallback?.(idleId);
+      if (fallbackTimer !== undefined) clearTimeout(fallbackTimer);
+    };
   }, [isNotFound]);
 
   // Escuchar cambios de ruta de navegación en el historial (popstate)
@@ -128,8 +155,8 @@ export const AppContent: React.FC = () => {
     };
 
     scrollToTop();
-
-    const timers = [25, 100, 250, 500, 900, 1400].map((delay, idx, arr) =>
+    const rafId = requestAnimationFrame(scrollToTop);
+    const timers = [120, 420].map((delay, idx, arr) =>
       setTimeout(() => {
         scrollToTop();
         if (idx === arr.length - 1) {
@@ -145,6 +172,7 @@ export const AppContent: React.FC = () => {
     window.addEventListener('pageshow', handlePageShow);
 
     return () => {
+      cancelAnimationFrame(rafId);
       timers.forEach(clearTimeout);
       window.removeEventListener('wheel', markUserInteracted);
       window.removeEventListener('touchstart', markUserInteracted);
@@ -272,28 +300,26 @@ export const AppContent: React.FC = () => {
           onOpenSmcSuite={() => setIsSmcSuiteOpen(true)}
         />
         <Roadmap />
-        <React.Suspense fallback={<div style={{ minHeight: '240px' }} aria-hidden="true" />}>
-          <StudentDashboardSection />
-          <FounderBiographySection onOpenAdvisorChat={() => setIsMentorOpen(true)} />
-          <TradingSection />
-          <TradingPlatformClone />
-          <StreamingHubSection />
-          <LiveClassesSection />
-          <LibrarySection />
-          <CommunityChatSection />
-          <MarketNewsSection />
-          <SmithBusinessSection />
-          <GamingSection />
-          <EcosystemSection />
-          <CapitalSection />
-          <FaqSection />
-          <NewsletterSection />
-        </React.Suspense>
+        <SectionGuard label="Dashboard de Estudiantes" anchorId="dashboard-estudiantes" defer><StudentDashboardSection /></SectionGuard>
+        <SectionGuard label="Biografía del Fundador" anchorId="fundador" defer><FounderBiographySection onOpenAdvisorChat={() => setIsMentorOpen(true)} /></SectionGuard>
+        <SectionGuard label="Ecosistema Trading" anchorId="trading" extraAnchors={['broker']} defer><TradingSection /></SectionGuard>
+        <SectionGuard label="Terminal Chart" anchorId="trading-plataforma-completa" defer fallbackHeight="320px"><TradingPlatformClone /></SectionGuard>
+        <SectionGuard label="Streaming Hub" anchorId="streaming" defer><StreamingHubSection /></SectionGuard>
+        <SectionGuard label="Clases en Vivo" anchorId="clases-en-vivo" defer><LiveClassesSection /></SectionGuard>
+        <SectionGuard label="Biblioteca Digital" anchorId="biblioteca" defer><LibrarySection /></SectionGuard>
+        <SectionGuard label="Comunidad" anchorId="comunidad-chat" defer><CommunityChatSection /></SectionGuard>
+        <SectionGuard label="Noticias de Mercado" anchorId="noticias-mercado" defer><MarketNewsSection /></SectionGuard>
+        <SectionGuard label="Smith Business" anchorId="smithbusiness" defer><SmithBusinessSection /></SectionGuard>
+        <SectionGuard label="División Gaming" anchorId="gaming" defer><GamingSection /></SectionGuard>
+        <SectionGuard label="Ecosistema Holding" anchorId="ecosistema" defer><EcosystemSection /></SectionGuard>
+        <SectionGuard label="Al-Hadiqa Capital" anchorId="capital" defer><CapitalSection /></SectionGuard>
+        <SectionGuard label="Preguntas Frecuentes" anchorId="faq" defer><FaqSection /></SectionGuard>
+        <SectionGuard label="Newsletter" anchorId="newsletter" defer><NewsletterSection /></SectionGuard>
       </main>
 
-      <React.Suspense fallback={null}>
+      <SectionGuard label="Pie de página" defer fallbackHeight="120px">
         <Footer />
-      </React.Suspense>
+      </SectionGuard>
 
       {/* Modales cargados bajo demanda con Suspense para máxima velocidad de carga */}
       <React.Suspense fallback={null}>

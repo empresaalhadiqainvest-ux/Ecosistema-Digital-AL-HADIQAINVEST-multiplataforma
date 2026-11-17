@@ -5435,3 +5435,9 @@ button, a, [role="button"], input, select, textarea {
   }
 }
 
+/* Aceleración de renderizado inicial evitando cálculo de layout/paint fuera de pantalla */
+.section-deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 600px;
+}
+

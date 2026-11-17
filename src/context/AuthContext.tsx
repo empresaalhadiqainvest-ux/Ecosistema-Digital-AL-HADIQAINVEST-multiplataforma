@@ -47,7 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedDemo = sessionStorage.getItem('alhadiqa_invest_demo_user');
     if (savedDemo) {
       try {
-        const parsed = JSON.parse(savedDemo) as { uid: string; email: string; displayName: string };
+        const parsed = JSON.parse(savedDemo) as {
+          uid: string;
+          email: string;
+          displayName: string;
+          profile?: UserProfile;
+        };
         const demoMockUser = {
           uid: parsed.uid,
           email: parsed.email,
@@ -57,18 +62,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } as unknown as FirebaseUser;
 
         setCurrentUser(demoMockUser);
+        if (parsed.profile) {
+          setProfile(parsed.profile);
+        }
         setIsDemoUser(true);
+        setLoading(false);
 
-        const unsubDemo = onSnapshot(doc(db, 'users', parsed.uid), (docSnap) => {
-          if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
-          }
-          setLoading(false);
-        }, () => {
-          setLoading(false);
-        });
-
-        return () => unsubDemo();
+        if (auth.currentUser?.uid === parsed.uid) {
+          const unsubDemo = onSnapshot(doc(db, 'users', parsed.uid), (docSnap) => {
+            if (docSnap.exists()) {
+              setProfile(docSnap.data() as UserProfile);
+            }
+          }, () => {});
+          return () => unsubDemo();
+        }
+        return;
       } catch (e) {
         console.warn('Error parsing demo user session:', e);
         sessionStorage.removeItem('alhadiqa_invest_demo_user');
@@ -318,19 +326,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    // Persistir en Firestore para que el panel de administración y las consultas en tiempo real funcionen de inmediato
-    try {
-      const docRef = doc(db, 'users', mockProfile.uid);
-      await setDoc(docRef, mockProfile, { merge: true });
-      if (mockProfile.role === 'admin') {
-        await setDoc(doc(db, 'admins', mockProfile.uid), {
-          uid: mockProfile.uid,
-          email: mockProfile.email,
-          role: 'admin',
-        }, { merge: true });
+    // Persistir en Firestore solo si hay sesión Firebase autenticada que coincida
+    if (auth.currentUser?.uid === mockProfile.uid) {
+      try {
+        const docRef = doc(db, 'users', mockProfile.uid);
+        await setDoc(docRef, mockProfile, { merge: true });
+        if (mockProfile.role === 'admin') {
+          await setDoc(doc(db, 'admins', mockProfile.uid), {
+            uid: mockProfile.uid,
+            email: mockProfile.email,
+            role: 'admin',
+          }, { merge: true });
+        }
+      } catch (e) {
+        console.warn('Al-Hadiqa Invest: Could not write mock profile to Firestore:', e);
       }
-    } catch (e) {
-      console.warn('Al-Hadiqa Invest: Could not write mock profile to Firestore:', e);
     }
 
     const demoMockUser = {
@@ -345,6 +355,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       uid: mockProfile.uid,
       email: mockProfile.email,
       displayName: mockProfile.displayName,
+      profile: mockProfile,
     }));
 
     setCurrentUser(demoMockUser);

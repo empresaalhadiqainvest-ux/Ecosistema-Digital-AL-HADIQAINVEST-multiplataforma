@@ -8,6 +8,15 @@ interface EmailViewerModalProps {
   onOpenPreferences?: () => void;
 }
 
+function sanitizeEmailHtml(rawHtml: string): string {
+  return String(rawHtml || '')
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<(iframe|object|embed|svg|meta|link)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<(iframe|object|embed|meta|link)\b[^>]*\/?>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(href|src)\s*=\s*(["'])\s*(?:javascript:|data:text\/html)[^"']*\2/gi, '$1="#"');
+}
+
 export const EmailViewerModal: React.FC<EmailViewerModalProps> = ({
   email,
   isOpen,
@@ -154,7 +163,7 @@ export const EmailViewerModal: React.FC<EmailViewerModalProps> = ({
           }}
         >
           <div
-            dangerouslySetInnerHTML={{ __html: email.htmlContent }}
+            dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(email.htmlContent) }}
             style={{
               maxWidth: '600px',
               margin: '0 auto',
