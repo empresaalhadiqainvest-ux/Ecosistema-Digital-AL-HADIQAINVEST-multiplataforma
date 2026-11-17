@@ -30,16 +30,22 @@ jobs:
       - name: Software Composition Analysis (SCA - npm audit)
         run: npm audit --audit-level=high
 
-      - name: Static Secret Hygiene Check
+      - name: Static Secret & Frontend Prefix Hygiene Check
         run: |
           if grep -rnE "AIza[0-9A-Za-z_-]{35}|-----BEGIN (RSA|EC|PRIVATE) KEY-----" src server server.ts; then
             echo "ERROR: Potential hardcoded credential detected!"
             exit 1
           fi
+          if grep -rnE "(VITE|NEXT_PUBLIC)_[A-Z0-9_]*(SECRET|PRIVATE_KEY|HMAC|SIGNING|GEMINI_API_KEY|SERVICE_ROLE|PASSWORD)|NEXT_PUBLIC_" src .env.example; then
+            echo "ERROR: Privileged secret or sensitive token prefix exposed to frontend!"
+            exit 1
+          fi
+          test -f .github/dependabot.yml
 
       - name: SAST TypeScript Typecheck & Build Verification
         run: |
           npm run lint
+          npx tsc --noEmit -p tsconfig.node.json
           npm run build
 
   container-and-canary-check:

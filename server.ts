@@ -20,6 +20,21 @@ import {
 } from './server/securityEngine';
 import { observability } from './server/observabilityEngine';
 import { backupService } from './server/backupService';
+import {
+  createStrictIpRateLimiter,
+  getRateLimiterStats,
+  pruneExpiredRateLimitEntries,
+} from './server/rateLimiter';
+import {
+  authSessionSchema,
+  mentorChatSchema,
+  rotateKeysSchema,
+  selfHealSchema,
+  streamSecurityTokenSchema,
+  streamVerifyTokenSchema,
+  validateBody,
+  verifyRestoreSchema,
+} from './server/validationSchemas';
 
 dotenv.config();
 
@@ -51,8 +66,28 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// Validación estricta de entradas OWASP Top 10 en toda la superficie /api
-app.use('/api', owaspInputGuardMiddleware);
+// Rate Limiting estricto por IP + Validación OWASP Top 10 en toda la superficie /api
+app.use(
+  '/api',
+  createStrictIpRateLimiter({ bucketName: 'global-api', windowMs: 60_000, maxRequests: 120 }),
+  owaspInputGuardMiddleware
+);
+app.use(
+  '/api/v1/auth',
+  createStrictIpRateLimiter({ bucketName: 'auth-strict', windowMs: 60_000, maxRequests: 20 })
+);
+app.use(
+  '/api/mentor',
+  createStrictIpRateLimiter({ bucketName: 'ai-mentor', windowMs: 60_000, maxRequests: 30 })
+);
+app.use(
+  '/api/gemini',
+  createStrictIpRateLimiter({ bucketName: 'ai-mentor', windowMs: 60_000, maxRequests: 30 })
+);
+app.use(
+  '/api/stream',
+  createStrictIpRateLimiter({ bucketName: 'stream-token', windowMs: 60_000, maxRequests: 30 })
+);
 
 // Middleware para forzar HTTPS, aumentar nivel de cifrado TLS/CSP y proteger transmisiones contra ciberataques
 app.use((req, res, next) => {
@@ -68,11 +103,12 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
 
   // Content Security Policy (CSP) reforzada con upgrade-insecure-requests para proteger reproductores y WebRTC
+  const isProd = process.env.NODE_ENV === 'production';
   res.setHeader(
     'Content-Security-Policy',
     [
       "default-src 'self' https:",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://apis.google.com https://www.gstatic.com https://accounts.google.com",
+      `script-src 'self' 'unsafe-inline'${isProd ? '' : " 'unsafe-eval'"} https://www.googletagmanager.com https://www.google-analytics.com https://apis.google.com https://www.gstatic.com https://accounts.google.com`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https:",
@@ -186,6 +222,10 @@ app.get('/api/health/deep', (_req, res) => {
         snapshotsStored: backups.length,
         latestSnapshotId: backups[0]?.snapshotId || null,
       },
+      rateLimiter: {
+        status: 'UP',
+        ...getRateLimiterStats(),
+      },
     },
     resources: {
       memory: metrics.memory,
@@ -220,15 +260,11 @@ app.get('/api/v1/platform/capabilities', (_req, res) => {
   });
 });
 
-// Gestión segura de sesiones: JWT firmado HS256 + Cookies HttpOnly/Secure/SameSite=Strict + CSRF Token
-app.post('/api/v1/auth/session', (req, res) => {
-  const { uid, role, email } = req.body || {};
-  if (!uid || typeof uid !== 'string' || uid.length > 128) {
-    return res.status(400).json({ error: 'UID de usuario válido es obligatorio.' });
-  }
-  const safeRole = role === 'admin' || role === 'aprobador' ? role : 'alumno';
+// Gestión segura de sesiones: Zod + JWT firmado HS256 + Cookies HttpOnly/Secure/SameSite=Strict + CSRF Token
+app.post('/api/v1/auth/session', validateBody(authSessionSchema), (req, res) => {
+  const { uid, role, email } = req.body;
   const csrfToken = crypto.randomBytes(24).toString('hex');
-  const { token, claims } = signSessionJwt(uid, safeRole, typeof email === 'string' ? email.slice(0, 120) : undefined, 3600);
+  const { token, claims } = signSessionJwt(uid, role, email, 3600);
 
   setHardenedSessionCookies(req, res, token, csrfToken, 3600);
   return res.json({
@@ -290,8 +326,9 @@ app.get('/api/v1/observability/metrics', (_req, res) => {
   res.json(observability.getMetricsSnapshot(wss.clients.size));
 });
 
-app.post('/api/v1/observability/self-heal', (_req, res) => {
-  const event = observability.executeSelfHealing('manual-diagnostic-trigger');
+app.post('/api/v1/observability/self-heal', validateBody(selfHealSchema, true), (req, res) => {
+  const trigger = req.body?.trigger || 'manual-diagnostic-trigger';
+  const event = observability.executeSelfHealing(trigger);
   res.json({ ok: true, event });
 });
 
@@ -300,8 +337,9 @@ app.get('/api/v1/security/audit', (_req, res) => {
   res.json(runRealSecurityAudit());
 });
 
-app.post('/api/v1/security/rotate-keys', (_req, res) => {
-  const status = secretVault.rotateKeys('admin-manual-rotation');
+app.post('/api/v1/security/rotate-keys', validateBody(rotateKeysSchema, true), (req, res) => {
+  const reason = req.body?.reason || 'admin-manual-rotation';
+  const status = secretVault.rotateKeys(reason);
   res.json({ rotated: true, vault: status });
 });
 
@@ -327,11 +365,9 @@ app.post('/api/v1/backups/create', (_req, res) => {
   res.json({ created: true, snapshot });
 });
 
-app.post('/api/v1/backups/verify-restore', (req, res) => {
-  const { snapshotId } = req.body || {};
-  const result = backupService.verifyRestoreInIsolatedSandbox(
-    typeof snapshotId === 'string' ? snapshotId : undefined
-  );
+app.post('/api/v1/backups/verify-restore', validateBody(verifyRestoreSchema, true), (req, res) => {
+  const { snapshotId } = req.body;
+  const result = backupService.verifyRestoreInIsolatedSandbox(snapshotId);
   res.status(result.status === 'VERIFIED_CLEAN' ? 200 : 500).json(result);
 });
 
@@ -875,33 +911,15 @@ const handleMentorChat = async (req: express.Request, res: express.Response) => 
   res.json({ reply, source: 'open-source-mentor-engine' });
 };
 
-app.post('/api/mentor/chat/stream', handleMentorChatStream);
-app.post('/api/gemini/chat/stream', handleMentorChatStream);
-app.post('/api/mentor/chat', handleMentorChat);
-app.post('/api/gemini/chat', handleMentorChat);
-
-// Rate limiter en memoria para endpoints de tokens de transmisión en vivo
-const streamTokenRateMap = new Map<string, number[]>();
+app.post('/api/mentor/chat/stream', validateBody(mentorChatSchema), handleMentorChatStream);
+app.post('/api/gemini/chat/stream', validateBody(mentorChatSchema), handleMentorChatStream);
+app.post('/api/mentor/chat', validateBody(mentorChatSchema), handleMentorChat);
+app.post('/api/gemini/chat', validateBody(mentorChatSchema), handleMentorChat);
 
 // Emisión de token efímero firmado con HMAC-SHA256 para proteger transmisiones en vivo (TLS 1.3 + AES-256-GCM / DTLS-SRTP)
-app.post('/api/stream/security-token', (req, res) => {
-  const clientIp =
-    (typeof req.headers['x-forwarded-for'] === 'string'
-      ? req.headers['x-forwarded-for'].split(',')[0].trim()
-      : req.ip) || '127.0.0.1';
-
+app.post('/api/stream/security-token', validateBody(streamSecurityTokenSchema), (req, res) => {
   const now = Date.now();
-  const recent = (streamTokenRateMap.get(clientIp) || []).filter((ts) => now - ts < 60_000);
-  if (recent.length >= 30) {
-    return res.status(429).json({ error: 'Rate limit excedido para generación de claves de transmisión.' });
-  }
-  recent.push(now);
-  streamTokenRateMap.set(clientIp, recent);
-
-  const { classId, hostUid, keyFingerprint } = req.body || {};
-  if (!classId || typeof classId !== 'string') {
-    return res.status(400).json({ error: 'classId válido es obligatorio.' });
-  }
+  const { classId, hostUid, keyFingerprint } = req.body;
 
   const sessionId = `sec-stream-${now.toString(36)}-${crypto.randomBytes(4).toString('hex')}`;
   const issuedAt = new Date(now).toISOString();
@@ -924,11 +942,8 @@ app.post('/api/stream/security-token', (req, res) => {
 });
 
 // Verificación criptográfica en tiempo constante de token de sala en vivo
-app.post('/api/stream/verify-token', (req, res) => {
-  const { sessionId, classId, hostUid, keyFingerprint, expiresAt, signature } = req.body || {};
-  if (!sessionId || !classId || !expiresAt || !signature) {
-    return res.status(400).json({ valid: false, reason: 'Parámetros de token incompletos.' });
-  }
+app.post('/api/stream/verify-token', validateBody(streamVerifyTokenSchema), (req, res) => {
+  const { sessionId, classId, hostUid, keyFingerprint, expiresAt, signature } = req.body;
 
   if (Date.now() > new Date(expiresAt).getTime()) {
     return res.status(401).json({ valid: false, reason: 'Token de transmisión expirado.' });
@@ -1041,20 +1056,7 @@ async function setupServer() {
     });
   }
 
-  observability.registerCachePruner(() => {
-    const cutoff = Date.now() - 60_000;
-    let removed = 0;
-    for (const [ip, timestamps] of Array.from(streamTokenRateMap.entries())) {
-      const fresh = timestamps.filter((ts) => ts >= cutoff);
-      if (fresh.length === 0) {
-        streamTokenRateMap.delete(ip);
-        removed += 1;
-      } else {
-        streamTokenRateMap.set(ip, fresh);
-      }
-    }
-    return removed;
-  });
+  observability.registerCachePruner(() => pruneExpiredRateLimitEntries(15 * 60 * 1000));
 
   observability.startWatchdog();
   backupService.startAutomatedBackups(() => ({

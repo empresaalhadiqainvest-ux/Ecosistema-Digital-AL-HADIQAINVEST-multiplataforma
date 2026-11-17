@@ -51,8 +51,13 @@ interface ResilienceDashboardData {
       dependenciesCount: number;
       devDependenciesCount: number;
       cicdWorkflowPresent: boolean;
+      dependabotConfigured?: boolean;
+      lockfilePresent?: boolean;
+      zodValidationActive?: boolean;
       dockerfilePresent: boolean;
       k8sManifestPresent: boolean;
+      vercelHeadersConfigured?: boolean;
+      frontendZeroSecretsVerified?: boolean;
     };
     secretVault: {
       activeKid: string;
@@ -766,12 +771,12 @@ export const SecurityComplianceModal: React.FC<SecurityComplianceModalProps> = (
                 </div>
 
                 <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Vault, PoLP &amp; SCA/CI</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Supply Chain, Zod &amp; Zero Secrets</div>
                   <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', marginTop: '0.25rem', fontFamily: 'monospace' }}>
                     {resilienceData.audit?.secretVault.activeKid || 'kid-active'}
                   </div>
                   <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '0.25rem' }}>
-                    Deps: {resilienceData.audit?.scaSummary.dependenciesCount ?? 0} · Docker: {resilienceData.audit?.scaSummary.dockerfilePresent ? 'Sí' : 'No'} · CI/CD: {resilienceData.audit?.scaSummary.cicdWorkflowPresent ? 'Sí' : 'No'}
+                    Deps: {resilienceData.audit?.scaSummary.dependenciesCount ?? 0} · Dependabot: {resilienceData.audit?.scaSummary.dependabotConfigured ? 'Activo' : 'No'} · Zod: {resilienceData.audit?.scaSummary.zodValidationActive ? 'Activo' : 'No'} · Zero Frontend Secrets: {resilienceData.audit?.scaSummary.frontendZeroSecretsVerified ? 'Verificado' : 'Alerta'}
                   </div>
                 </div>
               </div>

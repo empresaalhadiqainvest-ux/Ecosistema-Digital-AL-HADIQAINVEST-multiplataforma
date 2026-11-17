@@ -246,8 +246,13 @@ export function runRealSecurityAudit(): {
     devDependenciesCount: number;
     criticalPackages: { name: string; version: string }[];
     cicdWorkflowPresent: boolean;
+    dependabotConfigured: boolean;
+    lockfilePresent: boolean;
+    zodValidationActive: boolean;
     dockerfilePresent: boolean;
     k8sManifestPresent: boolean;
+    vercelHeadersConfigured: boolean;
+    frontendZeroSecretsVerified: boolean;
   };
   secretVault: ReturnType<typeof secretVault.getPublicStatus>;
 } {
@@ -274,7 +279,41 @@ export function runRealSecurityAudit(): {
     // ignore
   }
 
-  const criticalNames = ['express', 'firebase', 'react', 'three', 'ws', 'compression'];
+  let vercelHeadersConfigured = false;
+  try {
+    const vRaw = fs.readFileSync(path.join(cwd, 'vercel.json'), 'utf8');
+    const vJson = JSON.parse(vRaw) as { headers?: unknown[] };
+    vercelHeadersConfigured = Array.isArray(vJson.headers) && vJson.headers.length > 0;
+  } catch {
+    // ignore
+  }
+
+  let frontendZeroSecretsVerified = true;
+  try {
+    const forbiddenClientVarRegex = /(?:VITE|NEXT_PUBLIC)_[A-Z0-9_]*(?:SECRET|PRIVATE_KEY|HMAC|SIGNING|GEMINI_API_KEY|SERVICE_ROLE|PASSWORD)/;
+    const scanDir = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scanDir(full);
+        } else if (/\.(ts|tsx|js|jsx|html)$/i.test(entry.name)) {
+          const content = fs.readFileSync(full, 'utf8');
+          if (forbiddenClientVarRegex.test(content) || /\bNEXT_PUBLIC_/i.test(content)) {
+            frontendZeroSecretsVerified = false;
+          }
+        }
+      }
+    };
+    const srcPath = path.join(cwd, 'src');
+    if (fs.existsSync(srcPath)) {
+      scanDir(srcPath);
+    }
+  } catch {
+    // ignore
+  }
+
+  const criticalNames = ['express', 'firebase', 'react', 'three', 'ws', 'compression', 'zod'];
   const criticalPackages = criticalNames
     .filter((n) => deps[n])
     .map((n) => ({ name: n, version: deps[n] }));
@@ -297,8 +336,13 @@ export function runRealSecurityAudit(): {
       devDependenciesCount: Object.keys(devDeps).length,
       criticalPackages,
       cicdWorkflowPresent: fs.existsSync(path.join(cwd, '.github', 'workflows', 'security-cicd.yml')),
+      dependabotConfigured: fs.existsSync(path.join(cwd, '.github', 'dependabot.yml')),
+      lockfilePresent: fs.existsSync(path.join(cwd, 'package-lock.json')),
+      zodValidationActive: Boolean(deps.zod),
       dockerfilePresent: fs.existsSync(path.join(cwd, 'Dockerfile')),
       k8sManifestPresent: fs.existsSync(path.join(cwd, 'k8s', 'deployment.yaml')),
+      vercelHeadersConfigured,
+      frontendZeroSecretsVerified,
     },
     secretVault: secretVault.getPublicStatus(),
   };

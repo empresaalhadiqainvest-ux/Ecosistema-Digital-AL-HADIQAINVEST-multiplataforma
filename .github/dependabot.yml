@@ -1,0 +1,35 @@
+# Dependabot configuration for automated Supply Chain Security updates
+# Monitors npm packages and GitHub Actions workflows for vulnerabilities and opens PRs
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - "security"
+      - "dependencies"
+      - "supply-chain"
+    groups:
+      security-patches:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    ignore:
+      # Major framework bumps require manual regression verification
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "ci-cd"
+      - "security"
