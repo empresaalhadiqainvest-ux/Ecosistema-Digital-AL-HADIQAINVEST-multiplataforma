@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { socService } from '../services/socService';
 import {
   SocIncident,
@@ -299,16 +299,17 @@ export const SocExcaisresModal: React.FC<SocExcaisresModalProps> = ({ isOpen, on
       monitorFirebaseAuthLogs(initialLogs);
     }
 
-    // Listener en tiempo real sobre la colección firebase_auth_logs en Firestore
+    // Listener en tiempo real sobre firebase_auth_logs (requiere sesión Firebase Auth administrativa)
     let unsubAuthLogs = () => {};
-    try {
-      const authLogsQuery = query(
-        collection(db, 'firebase_auth_logs'),
-        orderBy('timestamp', 'desc'),
-        limit(60)
-      );
-      unsubAuthLogs = onSnapshot(
-        authLogsQuery,
+    if (auth.currentUser) {
+      try {
+        const authLogsQuery = query(
+          collection(db, 'firebase_auth_logs'),
+          orderBy('timestamp', 'desc'),
+          limit(60)
+        );
+        unsubAuthLogs = onSnapshot(
+          authLogsQuery,
         (snapshot) => {
           const remoteLogs: FirebaseAuthLogEntry[] = [];
           snapshot.forEach((docSnap) => {
@@ -341,10 +342,11 @@ export const SocExcaisresModal: React.FC<SocExcaisresModalProps> = ({ isOpen, on
           if (authMonitorEnabled) {
             monitorFirebaseAuthLogs(localLogs);
           }
-        }
-      );
-    } catch (_) {
-      // Fallback silencioso a caché local
+          }
+        );
+      } catch (_) {
+        // Fallback silencioso a caché local
+      }
     }
 
     const handleIncident = () => refreshData();

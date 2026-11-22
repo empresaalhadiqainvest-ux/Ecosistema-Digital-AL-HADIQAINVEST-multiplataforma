@@ -339,13 +339,15 @@ export const Background3D: React.FC = () => {
     // 5. ANIMATION LOOP
     // ==========================================
     let animationFrameId: number;
-    let clock = new THREE.Clock();
+    const timer = new THREE.Timer();
+    timer.connect(document);
 
-    const animate = () => {
+    const animate = (timestamp?: number) => {
       animationFrameId = requestAnimationFrame(animate);
       if (document.hidden) return;
 
-      const elapsedTime = clock.getElapsedTime();
+      timer.update(timestamp);
+      const elapsedTime = timer.getElapsed();
 
       // Smooth lerp mouse parallax & scroll reaction
       mainGroup.rotation.y += (targetRotY - mainGroup.rotation.y) * 0.04;
@@ -380,7 +382,7 @@ export const Background3D: React.FC = () => {
       renderer.render(scene, camera);
     };
 
-    animate();
+    animationFrameId = requestAnimationFrame(animate);
 
     // ==========================================
     // 6. RESOURCE DISPOSAL ON UNMOUNT
@@ -390,6 +392,7 @@ export const Background3D: React.FC = () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
+      timer.dispose();
 
       triangleGeometries.forEach((g) => g.dispose());
       triangleMaterials.forEach((m) => m.dispose());

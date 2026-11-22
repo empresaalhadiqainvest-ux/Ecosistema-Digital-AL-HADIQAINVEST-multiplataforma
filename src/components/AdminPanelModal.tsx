@@ -12,7 +12,7 @@ import {
   orderBy,
   limit,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { UserProfile, UserRole, UserStatus, UserPermissions } from '../context/AuthContext';
 import { LiveClassItem } from './LiveClassesSection';
 import { DownloadLogItem, LibraryCategory } from '../types';
@@ -41,6 +41,7 @@ import {
   subscribeFeedbackReports,
   updateFeedbackStatus,
   deleteFeedbackReport,
+  getLocalFeedbackHistory,
 } from '../services/feedbackService';
 
 interface AdminPanelModalProps {
@@ -118,16 +119,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   useEffect(() => {
     if (!isOpen) return;
 
-    // Users
-    const unsubUsers = onSnapshot(
-      collection(db, 'users'),
-      (snap) => {
-        const uList: UserProfile[] = [];
-        snap.forEach((d) => uList.push(d.data() as UserProfile));
-        setUsers(uList);
-      },
-      (err) => console.warn('AdminPanelModal - users listener:', err)
-    );
+    const hasFirebaseSession = Boolean(auth.currentUser);
+
+    // Users (requiere sesión Firebase Auth admin según firestore.rules)
+    const unsubUsers = hasFirebaseSession
+      ? onSnapshot(
+          collection(db, 'users'),
+          (snap) => {
+            const uList: UserProfile[] = [];
+            snap.forEach((d) => uList.push(d.data() as UserProfile));
+            setUsers(uList);
+          },
+          (err) => console.warn('AdminPanelModal - users listener:', err)
+        )
+      : () => {};
 
     // Classes
     const unsubClasses = onSnapshot(
@@ -176,17 +181,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       (err) => console.warn('AdminPanelModal - chat listener:', err)
     );
 
-    // Download Audit Logs (Real-time monitoring of who downloaded what and when)
-    const qLogs = query(collection(db, 'download_logs'), orderBy('downloadedAt', 'desc'), limit(50));
-    const unsubLogs = onSnapshot(
-      qLogs,
-      (snap) => {
-        const logs: DownloadLogItem[] = [];
-        snap.forEach((d) => logs.push({ id: d.id, ...(d.data() as Omit<DownloadLogItem, 'id'>) }));
-        setDownloadLogs(logs);
-      },
-      (err) => console.warn('download_logs onSnapshot error:', err)
-    );
+    // Download Audit Logs (requiere sesión Firebase Auth admin según firestore.rules)
+    const unsubLogs = hasFirebaseSession
+      ? onSnapshot(
+          query(collection(db, 'download_logs'), orderBy('downloadedAt', 'desc'), limit(50)),
+          (snap) => {
+            const logs: DownloadLogItem[] = [];
+            snap.forEach((d) => logs.push({ id: d.id, ...(d.data() as Omit<DownloadLogItem, 'id'>) }));
+            setDownloadLogs(logs);
+          },
+          (err) => console.warn('download_logs onSnapshot error:', err)
+        )
+      : () => {};
 
     // Global Chat Settings
     const unsubSettings = onSnapshot(
@@ -199,23 +205,34 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       (err) => console.warn('AdminPanelModal - settings listener:', err)
     );
 
-    // Transactional Email Logs
-    const qEmails = query(collection(db, 'email_logs'), orderBy('createdAt', 'desc'), limit(50));
-    const unsubEmails = onSnapshot(
-      qEmails,
-      (snap) => {
-        const eList: EmailLogItem[] = [];
-        snap.forEach((d) => eList.push({ id: d.id, ...(d.data() as Omit<EmailLogItem, 'id'>) }));
-        setEmailLogs(eList);
-      },
-      (err) => console.warn('email_logs onSnapshot error:', err)
-    );
+    // Transactional Email Logs (requiere sesión Firebase Auth admin según firestore.rules)
+    const unsubEmails = hasFirebaseSession
+      ? onSnapshot(
+          query(collection(db, 'email_logs'), orderBy('createdAt', 'desc'), limit(50)),
+          (snap) => {
+            const eList: EmailLogItem[] = [];
+            snap.forEach((d) => eList.push({ id: d.id, ...(d.data() as Omit<EmailLogItem, 'id'>) }));
+            setEmailLogs(eList);
+          },
+          (err) => console.warn('email_logs onSnapshot error:', err)
+        )
+      : () => {};
 
-    // Admin Action Audit Trail
-    const unsubAudit = subscribeAdminAuditLogs((logs) => setAdminAuditLogs(logs));
+    // Admin Action Audit Trail (requiere sesión Firebase Auth admin)
+    const unsubAudit = hasFirebaseSession
+      ? subscribeAdminAuditLogs((logs) => setAdminAuditLogs(logs))
+      : () => {};
 
-    // Feedback & Correcciones Listener
-    const unsubFeedback = subscribeFeedbackReports((reports) => setFeedbackReports(reports));
+    // Feedback & Correcciones Listener (usa historial local en modo demo sin Firebase Auth)
+    let unsubFeedback = () => {};
+    if (hasFirebaseSession) {
+      unsubFeedback = subscribeFeedbackReports(
+        (reports) => setFeedbackReports(reports),
+        () => setFeedbackReports(getLocalFeedbackHistory())
+      );
+    } else {
+      setFeedbackReports(getLocalFeedbackHistory());
+    }
 
     return () => {
       unsubUsers();
